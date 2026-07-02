@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sanal Galeri — Gezi Galerim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/gallery.css" />
+</head>
+<body>
+
+  <canvas id="sahne"></canvas>
+  <div class="vinyet" aria-hidden="true"></div>
+
+  <!-- Giriş / duraklatma ekranı -->
+  <div id="giris" class="overlay">
+    <div class="giris-kart">
+      <p class="eyebrow" id="giris-eyebrow">SANAL GALERİ</p>
+      <h1 id="giris-baslik">Yükleniyor…</h1>
+      <p id="giris-aciklama" class="dim"></p>
+      <button id="btn-gir" class="btn" disabled>Salona Gir</button>
+      <div class="kontroller">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> yürü</span>
+        <span id="ipucu-fare"><kbd>Fare</kbd> etrafına bak</span>
+        <span><kbd>Tık</kbd> esere yaklaşınca incele</span>
+        <span><kbd>Esc</kbd> menü</span>
+      </div>
+      <a class="geri" href="index.html">← Ana sayfaya dön</a>
+    </div>
+  </div>
+
+  <!-- Oyun içi arayüz -->
+  <div id="hud" class="hidden">
+    <div class="crosshair" id="crosshair"></div>
+    <p class="hedef-ipucu" id="hedef-ipucu">İncelemek için tıkla</p>
+  </div>
+
+  <!-- Büyük görüntüleme + not düzenleme -->
+  <div id="lightbox" class="overlay hidden">
+    <div class="lightbox-ic">
+      <button class="kapat" id="btn-kapat" title="Kapat (Esc)">✕</button>
+      <div class="lightbox-gorsel">
+        <img id="lb-img" src="" alt="" />
+      </div>
+      <div class="lightbox-panel">
+        <p class="eyebrow">ESER</p>
+        <input id="lb-baslik" class="lb-baslik" placeholder="Eser başlığı" />
+        <p class="dim kucuk">Plaket notu — galeride çerçevenin yanında görünür:</p>
+        <textarea id="lb-not" rows="6" placeholder="Bu kareyle ilgili anını yaz…"></textarea>
+        <div class="panel-alt">
+          <button id="btn-kaydet" class="btn">Kaydet & Devam Et</button>
+          <p id="kayit-mesaj" class="dim kucuk"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/gallery.js"></script>
+</body>
+</html>

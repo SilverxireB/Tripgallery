@@ -1,0 +1,207 @@
+/* ===== Temel ===== */
+:root {
+  --bg: #0d0b09;
+  --surface: #16130f;
+  --border: rgba(255, 245, 230, 0.1);
+  --text: #f2ede4;
+  --text-dim: #a89f90;
+  --gold: #c9a227;
+  --gold-soft: #e6c96b;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 162, 39, 0.08), transparent),
+    var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 300;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+h1, h2, h3, .logo {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+}
+
+::selection { background: rgba(201, 162, 39, 0.4); }
+
+code {
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 0.85em;
+  color: var(--gold-soft);
+}
+
+/* ===== Nav ===== */
+.nav {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 26px clamp(20px, 6vw, 72px);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 1.5rem;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+
+.nav-note {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+/* ===== Hero ===== */
+.hero {
+  text-align: center;
+  padding: clamp(70px, 12vh, 130px) 24px 40px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  margin-bottom: 22px;
+}
+
+.hero h1 {
+  font-size: clamp(2.6rem, 6.5vw, 4.6rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.hero h1 em {
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.hero-sub {
+  margin-top: 26px;
+  color: var(--text-dim);
+  font-size: 1.08rem;
+}
+
+/* ===== Salon kartları ===== */
+.halls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 28px;
+  max-width: 1000px;
+  margin: 40px auto 0;
+  padding: 0 24px;
+}
+
+.hall {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: transform 0.35s, border-color 0.35s, box-shadow 0.35s;
+}
+
+.hall.active:hover {
+  transform: translateY(-6px);
+  border-color: rgba(201, 162, 39, 0.55);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.55);
+}
+
+.hall.soon { opacity: 0.65; }
+
+.hall-visual {
+  height: 210px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 20%, var(--h1), transparent 65%),
+    radial-gradient(circle at 75% 85%, var(--h2), transparent 70%),
+    #12100d;
+  transition: transform 0.5s;
+}
+
+.hall.active:hover .hall-visual { transform: scale(1.05); }
+
+.hall-kanji {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 4.2rem;
+  color: rgba(255, 250, 240, 0.85);
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+}
+
+.hall-info { padding: 24px 26px 28px; }
+
+.hall-info h2 {
+  font-size: 1.7rem;
+}
+
+.hall-info h2 span {
+  color: var(--gold);
+  font-size: 1.1rem;
+  margin-left: 6px;
+}
+
+.hall-info p {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  margin-top: 8px;
+}
+
+.hall-cta {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--gold-soft);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.4);
+  padding-bottom: 2px;
+}
+
+.hall-cta.dim {
+  color: var(--text-dim);
+  border-bottom-color: var(--border);
+}
+
+/* ===== Nasıl eklenir ===== */
+.howto {
+  max-width: 720px;
+  margin: 90px auto 0;
+  padding: 0 24px;
+}
+
+.howto h3 {
+  font-size: 1.5rem;
+  margin-bottom: 18px;
+  color: var(--gold-soft);
+}
+
+.howto ol {
+  color: var(--text-dim);
+  padding-left: 22px;
+  display: grid;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+/* ===== Footer ===== */
+.footer {
+  text-align: center;
+  padding: 70px 24px 36px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
