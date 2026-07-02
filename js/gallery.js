@@ -260,6 +260,25 @@ function baslikDuvariDokusu(baslik, aciklama, adet) {
   return t;
 }
 
+function kapiDokusuCiz(baslik) {
+  const c = document.createElement("canvas");
+  c.width = 1024; c.height = 512;
+  const x = c.getContext("2d");
+  x.clearRect(0, 0, 1024, 512);
+  x.textAlign = "center";
+  x.fillStyle = "#c9a227";
+  x.font = "italic 300 50px Georgia, serif";
+  x.fillText("SERGİ", 512, 180);
+  x.font = "600 130px Georgia, serif";
+  x.fillText((baslik || "").toUpperCase(), 512, 320);
+  x.fillStyle = "#8a7a55";
+  x.fillRect(362, 380, 300, 4);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // ---------- Hol kurulumu ----------
 const eserler = [];
 const plaketler = new Map();
@@ -354,12 +373,11 @@ function holKur(fotoSayisi, baslik, aciklama) {
     duvar.rotation.y = -taraf * Math.PI / 2;
     scene.add(duvar);
   }
-  for (const uc of [-1, 1]) {
-    const duvar = new THREE.Mesh(new THREE.PlaneGeometry(W, H), duvarMat);
-    duvar.position.set(0, H / 2, uc * L / 2);
-    duvar.rotation.y = uc === 1 ? Math.PI : 0;
-    scene.add(duvar);
-  }
+  // Holün sonundaki (arka) duvar
+  const duvarArka = new THREE.Mesh(new THREE.PlaneGeometry(W, H), duvarMat);
+  duvarArka.position.set(0, H / 2, -L / 2);
+  duvarArka.rotation.y = 0;
+  scene.add(duvarArka);
 
   // --- Mimari ritim: pilastrlar (duvar) + kirişler (tavan) ---
   const pilastrMat = new THREE.MeshStandardMaterial({ color: 0xf0e9db, roughness: 0.85 });
@@ -435,25 +453,106 @@ function holKur(fotoSayisi, baslik, aciklama) {
   tanitimSpot.target.position.set(0, 2.2, -L / 2);
   scene.add(tanitimSpot, tanitimSpot.target);
 
-  // --- Giriş kapısı (arkanı dönünce boş duvar yerine çift kanatlı kapı) ---
+  // --- Lobi (Dış alan) ---
+  const lobiL = 8;
+  const lobiZ = L / 2 + lobiL / 2;
+  
+  const lobiZemin = new THREE.Mesh(new THREE.PlaneGeometry(W, lobiL), new THREE.MeshStandardMaterial({
+    map: zeminDoku, roughness: 0.32, metalness: 0.05, transparent: true, opacity: 0.86
+  }));
+  lobiZemin.rotation.x = -Math.PI / 2;
+  lobiZemin.position.set(0, 0.012, lobiZ);
+  scene.add(lobiZemin);
+  
+  const lobiTavan = new THREE.Mesh(new THREE.PlaneGeometry(W, lobiL), tavanMat);
+  lobiTavan.rotation.x = Math.PI / 2;
+  lobiTavan.position.set(0, H, lobiZ);
+  scene.add(lobiTavan);
+  
+  for (const taraf of [-1, 1]) {
+    const lobiDuvar = new THREE.Mesh(new THREE.PlaneGeometry(lobiL, H), duvarMat);
+    lobiDuvar.position.set(taraf * W / 2, H / 2, lobiZ);
+    lobiDuvar.rotation.y = -taraf * Math.PI / 2;
+    scene.add(lobiDuvar);
+  }
+  
+  const lobiArkaDuvar = new THREE.Mesh(new THREE.PlaneGeometry(W, H), duvarMat);
+  lobiArkaDuvar.position.set(0, H / 2, L / 2 + lobiL);
+  lobiArkaDuvar.rotation.y = Math.PI;
+  scene.add(lobiArkaDuvar);
+
+  const lobiIsik = new THREE.PointLight(0xfff3e0, 25, 15);
+  lobiIsik.position.set(0, H - 1, lobiZ);
+  scene.add(lobiIsik);
+
+  // --- Kapı etrafındaki ayırıcı duvar (Lobi ile Galeri arası) ---
+  const kapiDuvariGrup = new THREE.Group();
+  const solDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.75, H), duvarMat);
+  solDuvar.position.set(-2.825, H / 2, 0);
+  kapiDuvariGrup.add(solDuvar);
+  const sagDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.75, H), duvarMat);
+  sagDuvar.position.set(2.825, H / 2, 0);
+  kapiDuvariGrup.add(sagDuvar);
+  const ustDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 3.45), duvarMat);
+  ustDuvar.position.set(0, 3.45 + (H - 3.45) / 2, 0);
+  kapiDuvariGrup.add(ustDuvar);
+
+  const duvarLobi = kapiDuvariGrup.clone();
+  duvarLobi.position.set(0, 0, L / 2);
+  scene.add(duvarLobi); // Yüzü Lobiye (+Z) dönük
+  
+  const duvarGaleri = kapiDuvariGrup.clone();
+  duvarGaleri.position.set(0, 0, L / 2);
+  duvarGaleri.rotation.y = Math.PI;
+  scene.add(duvarGaleri); // Yüzü Galeriye (-Z) dönük
+
+  // Tabela (lobi tarafına, üst duvarın hemen önüne)
+  const kapiTabela = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.4, 1.2),
+    new THREE.MeshBasicMaterial({ map: kapiDokusuCiz(baslik), transparent: true })
+  );
+  kapiTabela.position.set(0, 4.3, L / 2 + 0.02); // Üst duvarın biraz önü
+  scene.add(kapiTabela);
+
+  // --- Giriş kapısı (Lobi ile hol arası çift kanatlı kapı) ---
   const kapiGrubu = new THREE.Group();
-  const kapiKasasi = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.45, 0.22), supurgelikMat);
-  kapiKasasi.position.y = 1.72;
-  kapiGrubu.add(kapiKasasi);
+  
+  // Kapı kasası (Çerçeve) - Katı blok yerine 3 parça
+  const kasaSol = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
+  kasaSol.position.set(-1.375, 1.725, 0);
+  kapiGrubu.add(kasaSol);
+  
+  const kasaSag = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
+  kasaSag.position.set(1.375, 1.725, 0);
+  kapiGrubu.add(kasaSag);
+  
+  const kasaUst = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.15, 0.22), supurgelikMat);
+  kasaUst.position.set(0, 3.375, 0);
+  kapiGrubu.add(kasaUst);
+  
   const kapiMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.4, metalness: 0.1 });
+  const kanatlar = [];
+  
   for (const sx of [-1, 1]) {
-    const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.28, 3.2, 0.08), kapiMat);
-    kanat.position.set(sx * 0.66, 1.62, 0.09);
-    kapiGrubu.add(kanat);
+    const pivot = new THREE.Group();
+    pivot.position.set(sx * 1.3, 1.66, 0.09); // Menteşe noktası
+    
+    const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.30, 3.28, 0.08), kapiMat);
+    kanat.position.set(-sx * 0.65, 0, 0); // Menteşeye göre kanat konumu
+    pivot.add(kanat);
+    
     const kol = new THREE.Mesh(
       new THREE.SphereGeometry(0.045, 12, 8),
       new THREE.MeshStandardMaterial({ color: 0xb08d3e, roughness: 0.2, metalness: 0.95 })
     );
-    kol.position.set(sx * 0.14, 1.55, 0.15);
-    kapiGrubu.add(kol);
+    kol.position.set(-sx * 1.18, -0.11, 0.06); // Menteşeye göre kol konumu
+    pivot.add(kol);
+    
+    kapiGrubu.add(pivot);
+    kanatlar.push({ pivot, sx });
   }
-  kapiGrubu.position.set(0, 0, L / 2 - 0.1);
-  kapiGrubu.rotation.y = Math.PI;
+
+  kapiGrubu.position.set(0, 0, L / 2);
   scene.add(kapiGrubu);
 
   // --- Banklar ---
@@ -517,7 +616,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   scene.add(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
   scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
 
-  return { W, L, H, tarafBasina };
+  return { W, L, H, tarafBasina, kanatlar };
 }
 
 // ---------- Tablo + çerçeve + plaket ----------
@@ -688,6 +787,9 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
 let gezintiAktif = false;
 let surukleModu = false;
 let kilitCalisti = false;
+let kapiAcik = false;
+let kapiAcilmaOrani = 0;
+let kanatNesneleri = [];
 const fareNDC = new THREE.Vector2(0, 0);
 
 // ---------- Hareket ----------
@@ -721,7 +823,16 @@ function hareketGuncelle(dt) {
 
   const p = controls.getObject().position;
   p.x = THREE.MathUtils.clamp(p.x, -(HOL.W / 2 - 0.7), HOL.W / 2 - 0.7);
-  p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), HOL.L / 2 - 0.9);
+  
+  // Kapı tamamen açılmadıysa duvardan geçmeyi engelle
+  if (kapiAcilmaOrani < 0.6) {
+    if (p.z > HOL.L / 2 + 0.3) {
+      p.z = Math.max(p.z, HOL.L / 2 + 0.5);
+    } else if (p.z < HOL.L / 2 - 0.3) {
+      p.z = Math.min(p.z, HOL.L / 2 - 0.5);
+    }
+  }
+  p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), HOL.L / 2 + 6.5);
 
   const tempo = Math.hypot(hiz.x, hiz.z);
   adimFazi += dt * tempo * 1.9;
@@ -757,8 +868,14 @@ function hedefGuncelle() {
   const kesisimler = raycaster.intersectObjects(eserler, false);
   const yakin = kesisimler.find((k) => k.distance < 7);
   hedefEser = yakin ? yakin.object : null;
+  
   crosshair.classList.toggle("aktif", !!hedefEser);
   ipucu.classList.toggle("gorunur", !!hedefEser);
+  
+  if (hedefEser) {
+    ipucu.textContent = "İncelemek için tıkla";
+  }
+  
   document.body.style.cursor = surukleModu && hedefEser ? "pointer" : "";
 }
 
@@ -842,6 +959,7 @@ document.body.addEventListener("click", (e) => {
   if (e.target.closest("button, a, input, textarea")) return;
   if (surukleModu && surukleMesafe > 6) return;
   if (performance.now() - girisZamani < 400) return; // giriş tıklaması eseri açmasın
+  
   lightboxAc(hedefEser.userData.foto);
 });
 
@@ -935,7 +1053,9 @@ async function baslat() {
     `${veri.aciklama || ""}  ·  ${veri.fotograflar.length} eser`;
   document.title = `${veri.baslik} — Sanal Galeri`;
 
-  const { L } = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama);
+  const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama);
+  const L = hol.L;
+  kanatNesneleri = hol.kanatlar;
 
   // 22 esere kadar gerçek spot ışığı; üzerinde sahte ışık gölü (performans)
   const gercekSpot = veri.fotograflar.length <= 22;
@@ -947,8 +1067,10 @@ async function baslat() {
     tabloOlustur(foto, i, taraf, z, gercekSpot);
   });
 
-  controls.getObject().position.set(0, 1.7, L / 2 - 2);
-  camera.lookAt(0, 1.65, -L / 2);
+  // Lobide doğ, yüzün kapıya (L/2'ye) dönük
+  const pObj = controls.getObject();
+  pObj.position.set(0, 1.7, L / 2 + 4.5);
+  pObj.rotation.set(0, 0, 0); // Lobi +Z'de, kapı +Z'nin tersi (-Z)'de olduğu için rotation 0,0,0 kapıya bakar.
 
   btnGir.disabled = false;
   btnGir.textContent = "Salona Gir";
@@ -956,6 +1078,26 @@ async function baslat() {
   renderer.setAnimationLoop(() => {
     const dt = Math.min(saat.getDelta(), 0.05);
     zaman += dt;
+    
+    // Mesafe bazlı otomatik kapı kontrolü
+    const kapiMesafe = Math.abs(pObj.position.z - (L / 2));
+    kapiAcik = (kapiMesafe < 2.5);
+
+    // Kapı animasyonu
+    if (kapiAcik) {
+      if (kapiAcilmaOrani < 1) kapiAcilmaOrani += dt * 1.5;
+      if (kapiAcilmaOrani > 1) kapiAcilmaOrani = 1;
+    } else {
+      if (kapiAcilmaOrani > 0) kapiAcilmaOrani -= dt * 1.5;
+      if (kapiAcilmaOrani < 0) kapiAcilmaOrani = 0;
+    }
+
+    const ease = 1 - Math.pow(1 - kapiAcilmaOrani, 3);
+    const aci = ease * (Math.PI / 2 + 0.3); // 100 küsur derece
+    kanatNesneleri.forEach(k => {
+      k.pivot.rotation.y = -k.sx * aci; // İçeriye (negatif yöne) açılsın
+    });
+
     hareketGuncelle(dt);
     hedefGuncelle();
     tozGuncelle();
