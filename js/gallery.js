@@ -1115,7 +1115,7 @@ addEventListener("keydown", (e) => {
 async function baslat() {
   let veri;
   try {
-    const yanit = await fetch(`data/${GEZI}.json`);
+    const yanit = await fetch(`data/${GEZI}.json`, { cache: "no-store" });
     if (!yanit.ok) throw new Error(yanit.status);
     veri = await yanit.json();
   } catch {
