@@ -264,4 +264,57 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
 @media (max-width: 800px) {
   .lightbox-ic { grid-template-columns: 1fr; overflow-y: auto; }
   .lightbox-gorsel img { max-height: 42vh; }
+  #joystick-zone { display: block; }
+  .kontroller { display: none; }
+}
+
+/* ===== Sanal Joystick ===== */
+#joystick-zone {
+  position: absolute;
+  bottom: 30px;
+  left: 30px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  touch-action: none;
+  display: none;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+#joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ===== Otomatik Tur Butonu ===== */
+#btn-ototur {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--gold-soft);
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  padding: 9px 20px;
+  border-radius: 24px;
+  cursor: pointer;
+  z-index: 15;
+  font-family: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  pointer-events: auto;
+  transition: background 0.3s;
+}
+
+#btn-ototur:hover {
+  background: rgba(201, 162, 39, 0.25);
 }

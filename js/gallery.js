@@ -254,29 +254,55 @@ function baslikDuvariDokusu(baslik, aciklama, adet) {
   const c = document.createElement("canvas");
   c.width = 2048; c.height = 1024;
   const x = c.getContext("2d");
-  x.clearRect(0, 0, 2048, 1024);
-  x.textAlign = "center";
-  x.fillStyle = "#3a3227";
-  x.font = "300 64px Georgia, serif";
-  x.fillText("— KALICI SERGİ —", 1024, 300);
-  x.font = "600 190px Georgia, serif";
-  x.fillStyle = "#2c261c";
-  x.fillText(baslik, 1024, 520);
-  x.fillStyle = "#8a7a55";
-  x.fillRect(724, 590, 600, 5);
-  x.font = "italic 56px Georgia, serif";
-  x.fillStyle = "#4a4234";
-  const satirlar = metniSar(x, aciklama || "", 1500);
-  let y = 710;
-  for (const s of satirlar.slice(0, 3)) {
-    x.fillText(s, 1024, y);
-    y += 72;
-  }
-  x.font = "300 44px Georgia, serif";
-  x.fillText(`${adet} eser`, 1024, y + 30);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
+
+  function yaziCiz() {
+    // Koyu overlay (resmin üstüne yarı saydam siyah)
+    x.fillStyle = "rgba(13, 11, 9, 0.72)";
+    x.fillRect(0, 0, 2048, 1024);
+    // Yazılar
+    x.textAlign = "center";
+    x.fillStyle = "#c9a227";
+    x.font = "italic 52px Georgia, serif";
+    x.fillText("— SONSUZLUĞA ASILI ANILAR —", 1024, 300);
+    x.font = "600 190px Georgia, serif";
+    x.fillStyle = "#f2ede4";
+    x.fillText(baslik, 1024, 520);
+    x.fillStyle = "#c9a227";
+    x.fillRect(724, 590, 600, 3);
+    x.font = "italic 56px Georgia, serif";
+    x.fillStyle = "#a89f90";
+    const satirlar = metniSar(x, aciklama || "", 1500);
+    let y = 710;
+    for (const s of satirlar.slice(0, 3)) {
+      x.fillText(s, 1024, y);
+      y += 72;
+    }
+    x.font = "300 44px Georgia, serif";
+    x.fillText(`${adet} eser`, 1024, y + 30);
+    t.needsUpdate = true;
+  }
+
+  // Arka plan resmi yükle
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    // Resmi canvas'a sığdır (cover tarzı)
+    const scale = Math.max(2048 / img.width, 1024 / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    x.drawImage(img, (2048 - w) / 2, (1024 - h) / 2, w, h);
+    yaziCiz();
+  };
+  img.onerror = () => {
+    // Resim yüklenemezse sadece yazıları çiz
+    x.clearRect(0, 0, 2048, 1024);
+    yaziCiz();
+  };
+  img.src = `assets/${GEZI}/gp007.jpg`;
+
   return t;
 }
 
@@ -459,13 +485,13 @@ function holKur(fotoSayisi, baslik, aciklama) {
 
   // --- Sergi tanıtım duvarı (holün sonunda) ---
   const tanitim = new THREE.Mesh(
-    new THREE.PlaneGeometry(6.4, 3.2),
+    new THREE.PlaneGeometry(W, H),
     new THREE.MeshBasicMaterial({
       map: baslikDuvariDokusu(baslik, aciklama, fotoSayisi),
       transparent: true,
     })
   );
-  tanitim.position.set(0, 2.5, -L / 2 + 0.03);
+  tanitim.position.set(0, H / 2, -L / 2 + 0.03);
   scene.add(tanitim);
 
   const tanitimSpot = new THREE.SpotLight(0xfff0d8, 26, 12, 0.7, 0.7, 1.6);
@@ -630,6 +656,39 @@ function holKur(fotoSayisi, baslik, aciklama) {
   }
   scene.add(yapraklar);
   sakura = { mesh: yapraklar, parcalar };
+
+  // --- Yerde birikmiş kiraz çiçeği yaprakları ---
+  const yerdeYaprakSayisi = Math.min(600, Math.floor(L * 8));
+  const yerdeGeo = new THREE.PlaneGeometry(0.09, 0.09);
+  const yerdeMat = new THREE.MeshBasicMaterial({
+    map: sakuraDokusu(),
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const yerdeYapraklar = new THREE.InstancedMesh(yerdeGeo, yerdeMat, yerdeYaprakSayisi);
+  const _m = new THREE.Matrix4();
+  const _q = new THREE.Quaternion();
+  const _e = new THREE.Euler();
+  const _s = new THREE.Vector3();
+  for (let i = 0; i < yerdeYaprakSayisi; i++) {
+    const px = (Math.random() - 0.5) * W * 0.95;
+    const pz = (Math.random() - 0.5) * (L + 6);
+    const py = 0.02 + Math.random() * 0.03; // zeminin hemen üstü
+    _e.set(
+      -Math.PI / 2 + (Math.random() - 0.5) * 0.4, // neredeyse yatay
+      Math.random() * Math.PI * 2, // rastgele yön
+      (Math.random() - 0.5) * 0.3
+    );
+    _q.setFromEuler(_e);
+    const sc = 0.7 + Math.random() * 0.6;
+    _s.set(sc, sc, sc);
+    _m.compose(new THREE.Vector3(px, py, pz), _q, _s);
+    yerdeYapraklar.setMatrixAt(i, _m);
+  }
+  yerdeYapraklar.instanceMatrix.needsUpdate = true;
+  scene.add(yerdeYapraklar);
 
   // --- Genel ışık ve atmosfer ---
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
@@ -900,19 +959,39 @@ let adimFazi = 0;
 let zaman = 0;
 
 function hareketGuncelle(dt) {
-  if (gezintiAktif) {
+  if (gezintiAktif && !turModu) {
     const ivme = tuslar.has("ShiftLeft") ? 40 : 24;
-    const yon = new THREE.Vector3(
-      (tuslar.has("KeyD") || tuslar.has("ArrowRight") ? 1 : 0) -
-      (tuslar.has("KeyA") || tuslar.has("ArrowLeft") ? 1 : 0),
-      0,
-      (tuslar.has("KeyS") || tuslar.has("ArrowDown") ? 1 : 0) -
-      (tuslar.has("KeyW") || tuslar.has("ArrowUp") ? 1 : 0)
-    );
+    let kx = (tuslar.has("KeyD") || tuslar.has("ArrowRight") ? 1 : 0) -
+             (tuslar.has("KeyA") || tuslar.has("ArrowLeft") ? 1 : 0);
+    let kz = (tuslar.has("KeyS") || tuslar.has("ArrowDown") ? 1 : 0) -
+             (tuslar.has("KeyW") || tuslar.has("ArrowUp") ? 1 : 0);
+
+    // Joystick girdisi (klavye yoksa)
+    if (kx === 0 && kz === 0 && joyAktif) {
+      kx = joyX;
+      kz = joyY;
+    }
+
+    const yon = new THREE.Vector3(kx, 0, kz);
     if (yon.lengthSq() > 0) yon.normalize();
     hiz.x += yon.x * ivme * dt;
     hiz.z += yon.z * ivme * dt;
   }
+
+  // Tur modu: yavaş ve sabit ileri yürüyüş
+  if (turModu && gezintiAktif) {
+    hiz.z = -12 * dt;
+    hiz.x = 0;
+    // Eserin önünde yavaşla
+    const pz = controls.getObject().position.z;
+    for (let i = 0; i < eserler.length; i++) {
+      if (Math.abs(pz - eserler[i].parent.position.z) < 2.5) {
+        hiz.z *= 0.35;
+        break;
+      }
+    }
+  }
+
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
 
   const p = controls.getObject().position;
@@ -1037,6 +1116,123 @@ addEventListener("mousemove", (e) => {
 
 addEventListener("mouseup", () => { surukleniyor = false; });
 
+// ---------- Dokunmatik Bakış (Mobil) ----------
+let dokunBakisId = null;
+
+canvas.addEventListener("touchstart", (e) => {
+  if (!gezintiAktif || lightboxAcik) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    // Joystick bölgesine (sol alt 180px) dokunmadıysa bakış olarak al
+    if (t.clientX > 180 || t.clientY < innerHeight - 180) {
+      if (dokunBakisId !== null) continue; // zaten bir parmak bakıyor
+      dokunBakisId = t.identifier;
+      surukleModu = true;
+      surukleniyor = true;
+      surukleMesafe = 0;
+      sonFareX = t.clientX;
+      sonFareY = t.clientY;
+      break;
+    }
+  }
+}, {passive: true});
+
+addEventListener("touchmove", (e) => {
+  if (dokunBakisId === null || !surukleniyor) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === dokunBakisId) {
+      fareNDC.set((t.clientX / innerWidth) * 2 - 1, -(t.clientY / innerHeight) * 2 + 1);
+      const dx = t.clientX - sonFareX;
+      const dy = t.clientY - sonFareY;
+      surukleMesafe += Math.abs(dx) + Math.abs(dy);
+      sonFareX = t.clientX;
+      sonFareY = t.clientY;
+      bakis.setFromQuaternion(camera.quaternion);
+      bakis.y -= dx * 0.004;
+      bakis.x -= dy * 0.004;
+      bakis.x = THREE.MathUtils.clamp(bakis.x, -1.4, 1.4);
+      camera.quaternion.setFromEuler(bakis);
+      break;
+    }
+  }
+}, {passive: true});
+
+addEventListener("touchend", (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === dokunBakisId) {
+      surukleniyor = false;
+      dokunBakisId = null;
+      break;
+    }
+  }
+});
+
+// ---------- Sanal Joystick (Mobil) ----------
+let joyAktif = false, joyId = null, joyX = 0, joyY = 0;
+const joyZone = qs("#joystick-zone");
+const joyKnob = qs("#joystick-knob");
+
+if (joyZone) {
+  function joyGuncelle(cx, cy) {
+    const rect = joyZone.getBoundingClientRect();
+    const r = rect.width / 2;
+    let dx = cx - (rect.left + r);
+    let dy = cy - (rect.top + r);
+    const dist = Math.hypot(dx, dy);
+    if (dist > r) { dx = (dx / dist) * r; dy = (dy / dist) * r; }
+    joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    joyX = dx / r;
+    joyY = dy / r;
+  }
+
+  joyZone.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.changedTouches[0];
+    joyId = t.identifier;
+    joyAktif = true;
+    surukleModu = true;
+    if (!gezintiAktif) { girisDenendi = true; gezintiBaslat(); }
+    joyGuncelle(t.clientX, t.clientY);
+  }, {passive: false});
+
+  joyZone.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    if (!joyAktif) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyId) {
+        joyGuncelle(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+      }
+    }
+  }, {passive: false});
+
+  const joyBitir = (e) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joyId) {
+        joyAktif = false;
+        joyId = null;
+        joyX = 0; joyY = 0;
+        joyKnob.style.transform = "translate(-50%, -50%)";
+      }
+    }
+  };
+  joyZone.addEventListener("touchend", joyBitir);
+  joyZone.addEventListener("touchcancel", joyBitir);
+}
+
+// ---------- Otomatik Tur Modu ----------
+let turModu = false;
+const btnOtotur = qs("#btn-ototur");
+if (btnOtotur) {
+  btnOtotur.addEventListener("click", (e) => {
+    e.stopPropagation();
+    turModu = !turModu;
+    btnOtotur.textContent = turModu ? "■ Turu Durdur" : "✦ Otomatik Tur";
+    btnOtotur.style.background = turModu ? "rgba(201, 162, 39, 0.35)" : "";
+  });
+}
+
 // ---------- Lightbox ----------
 const lightbox = qs("#lightbox");
 const lbImg = qs("#lb-img");
@@ -1065,14 +1261,12 @@ function lightboxAc(foto) {
   kayitMesaj.textContent = "";
   lightbox.classList.remove("hidden");
   qs("#hud").classList.add("hidden");
-  if (muzik) muzik.volume = 0.08; // eser incelenirken müzik kısılır
   controls.unlock();
 }
 
 function lightboxKapatVeDon() {
   lightboxAcik = false;
   lightbox.classList.add("hidden");
-  if (muzik) muzik.volume = 0.22;
   if (surukleModu) gezintiBaslat();
   else controls.lock();
 }
@@ -1112,7 +1306,6 @@ function gezintiBaslat() {
   giris.classList.add("hidden");
   qs("#hud").classList.remove("hidden");
   crosshair.classList.toggle("hidden", surukleModu);
-  muzikOynat();
 }
 
 function gezintiDurdur() {
@@ -1166,7 +1359,6 @@ addEventListener("keydown", (e) => {
   if (lightboxAcik) {
     lightboxAcik = false;
     lightbox.classList.add("hidden");
-    if (muzik) muzik.volume = 0.22;
     gezintiDurdur();
   } else if (surukleModu && gezintiAktif) {
     gezintiDurdur();
@@ -1237,6 +1429,8 @@ async function baslat() {
     if (kapiAcikYeni !== kapiAcik) {
       kapiAcik = kapiAcikYeni;
       kapiSesi(kapiAcik); // menteşe gıcırtısı
+      // Kapı ilk açıldığında müziği başlat
+      if (kapiAcik) muzikOynat();
     }
 
     // Kapı animasyonu
