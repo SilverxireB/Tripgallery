@@ -784,9 +784,10 @@ let kapiAcilmaOrani = 0;
 let kanatNesneleri = [];
 const fareNDC = new THREE.Vector2(0, 0);
 
-// ---------- Ses (WebAudio — dosyasız, sentezlenmiş) ----------
+// ---------- Ses ----------
+// Sentetik ayak sesi / oda uğultusu / tık denendi, sinir bozucuydu — kaldırıldı.
+// Şimdi: yalnızca hafif kapı gıcırtısı + kullanıcının kendi müziği.
 let sesCtx = null;
-let sonAdim = 0;
 
 function sesBaslat() {
   if (sesCtx) {
@@ -795,29 +796,32 @@ function sesBaslat() {
   }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
-  sesCtx = new AC();
-
-  // Oda tonu: yumuşak kahverengi gürültü (havalandırma / uzak uğultu)
-  const sr = sesCtx.sampleRate;
-  const buf = sesCtx.createBuffer(1, sr * 4, sr);
-  const d = buf.getChannelData(0);
-  let son = 0;
-  for (let i = 0; i < d.length; i++) {
-    const beyaz = Math.random() * 2 - 1;
-    son = (son + 0.02 * beyaz) / 1.02;
-    d[i] = son * 3.5;
-  }
-  const kaynak = sesCtx.createBufferSource();
-  kaynak.buffer = buf;
-  kaynak.loop = true;
-  const filtre = sesCtx.createBiquadFilter();
-  filtre.type = "lowpass";
-  filtre.frequency.value = 320;
-  const kazanc = sesCtx.createGain();
-  kazanc.gain.value = 0.035;
-  kaynak.connect(filtre).connect(kazanc).connect(sesCtx.destination);
-  kaynak.start();
+  try { sesCtx = new AC(); } catch { sesCtx = null; }
 }
+
+// ---------- Müzik (assets/<gezi>/muzik.mp3 veya manifestteki "muzik" alanı) ----------
+let muzik = null;
+let muzikAcik = true;
+
+function muzikKur(veri) {
+  const kaynak = veri.muzik || `assets/${GEZI}/muzik.mp3`;
+  const a = new Audio(kaynak);
+  a.loop = true;
+  a.volume = 0.22;
+  a.addEventListener("error", () => { muzik = null; }); // dosya yoksa sessizce vazgeç
+  muzik = a;
+}
+
+function muzikOynat() {
+  if (muzik && muzikAcik && muzik.paused) muzik.play().catch(() => {});
+}
+
+addEventListener("keydown", (e) => {
+  if (e.code !== "KeyM" || !muzik) return;
+  muzikAcik = !muzikAcik;
+  if (muzikAcik) muzik.play().catch(() => {});
+  else muzik.pause();
+});
 
 function gurultuTamponu(sure) {
   const sr = sesCtx.sampleRate;
@@ -825,23 +829,6 @@ function gurultuTamponu(sure) {
   const d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   return buf;
-}
-
-function adimSesi() {
-  if (!sesCtx) return;
-  const t = sesCtx.currentTime;
-  const src = sesCtx.createBufferSource();
-  src.buffer = gurultuTamponu(0.1);
-  const f = sesCtx.createBiquadFilter();
-  f.type = "bandpass";
-  f.frequency.value = 700 + Math.random() * 300;
-  f.Q.value = 0.9;
-  const g = sesCtx.createGain();
-  g.gain.setValueAtTime(0.11 + Math.random() * 0.05, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  src.connect(f).connect(g).connect(sesCtx.destination);
-  src.start(t);
-  src.stop(t + 0.12);
 }
 
 function kapiSesi(aciliyor) {
@@ -857,7 +844,7 @@ function kapiSesi(aciliyor) {
   f.frequency.linearRampToValueAtTime(aciliyor ? 420 : 240, t + 0.8);
   const g = sesCtx.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(0.05, t + 0.15);
+  g.gain.linearRampToValueAtTime(0.028, t + 0.15);
   g.gain.linearRampToValueAtTime(0.0001, t + 0.85);
   src.connect(f).connect(g).connect(sesCtx.destination);
   src.start(t);
@@ -867,26 +854,11 @@ function kapiSesi(aciliyor) {
   osc.frequency.value = 90;
   const og = sesCtx.createGain();
   og.gain.setValueAtTime(0.0001, t + 0.72);
-  og.gain.linearRampToValueAtTime(0.06, t + 0.76);
+  og.gain.linearRampToValueAtTime(0.035, t + 0.76);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
   osc.connect(og).connect(sesCtx.destination);
   osc.start(t + 0.72);
   osc.stop(t + 1);
-}
-
-function tikSesi() {
-  if (!sesCtx) return;
-  const t = sesCtx.currentTime;
-  const osc = sesCtx.createOscillator();
-  osc.type = "triangle";
-  osc.frequency.setValueAtTime(1400, t);
-  osc.frequency.exponentialRampToValueAtTime(700, t + 0.07);
-  const g = sesCtx.createGain();
-  g.gain.setValueAtTime(0.05, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-  osc.connect(g).connect(sesCtx.destination);
-  osc.start(t);
-  osc.stop(t + 0.1);
 }
 
 // ---------- Hareket ----------
@@ -940,13 +912,6 @@ function hareketGuncelle(dt) {
   const tempo = Math.hypot(hiz.x, hiz.z);
   adimFazi += dt * tempo * 1.9;
   p.y = 1.7 + Math.sin(adimFazi) * Math.min(tempo / 40, 1) * 0.045;
-
-  // Her adımda (faz yarım tur döndüğünde) ayak sesi
-  const adimNo = Math.floor(adimFazi / Math.PI);
-  if (adimNo > sonAdim) {
-    sonAdim = adimNo;
-    if (gezintiAktif && tempo > 1.5) adimSesi();
-  }
 }
 
 function tozGuncelle() {
@@ -1038,12 +1003,14 @@ function lightboxAc(foto) {
   kayitMesaj.textContent = "";
   lightbox.classList.remove("hidden");
   qs("#hud").classList.add("hidden");
+  if (muzik) muzik.volume = 0.08; // eser incelenirken müzik kısılır
   controls.unlock();
 }
 
 function lightboxKapatVeDon() {
   lightboxAcik = false;
   lightbox.classList.add("hidden");
+  if (muzik) muzik.volume = 0.22;
   if (surukleModu) gezintiBaslat();
   else controls.lock();
 }
@@ -1069,7 +1036,6 @@ document.body.addEventListener("click", (e) => {
   if (e.target.closest("button, a, input, textarea")) return;
   if (surukleModu && surukleMesafe > 6) return;
   if (performance.now() - girisZamani < 400) return; // giriş tıklaması eseri açmasın
-  tikSesi();
   lightboxAc(hedefEser.userData.foto);
 });
 
@@ -1084,6 +1050,7 @@ function gezintiBaslat() {
   giris.classList.add("hidden");
   qs("#hud").classList.remove("hidden");
   crosshair.classList.toggle("hidden", surukleModu);
+  muzikOynat();
 }
 
 function gezintiDurdur() {
@@ -1137,6 +1104,7 @@ addEventListener("keydown", (e) => {
   if (lightboxAcik) {
     lightboxAcik = false;
     lightbox.classList.add("hidden");
+    if (muzik) muzik.volume = 0.22;
     gezintiDurdur();
   } else if (surukleModu && gezintiAktif) {
     gezintiDurdur();
@@ -1168,6 +1136,8 @@ async function baslat() {
   qs("#giris-aciklama").textContent =
     `${veri.aciklama || ""}  ·  ${veri.fotograflar.length} eser`;
   document.title = `${veri.baslik} — Sanal Galeri`;
+
+  muzikKur(veri);
 
   const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama);
   const L = hol.L;
