@@ -630,7 +630,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   }
 
   // --- Havada süzülen kiraz çiçeği yaprakları ---
-  const yaprakSayisi = Math.min(420, Math.floor(L * 5));
+  const yaprakSayisi = Math.min(1200, Math.floor(L * 10));
   const yaprakGeo = new THREE.PlaneGeometry(0.085, 0.085);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: sakuraDokusu(),
@@ -663,7 +663,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
   // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
   // Kapasite dolunca en eski yaprağın yeri sessizce yeniden kullanılır.
-  const YERDE_KAPASITE = 6000;
+  const YERDE_KAPASITE = 24000;
   const yerdeYapraklar = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(0.09, 0.09),
     new THREE.MeshBasicMaterial({
@@ -975,20 +975,11 @@ function hareketGuncelle(dt) {
     hiz.z += yon.z * ivme * dt;
   }
 
-  // Tur modu: hol boyunca yürüyüş; eser hizasına yaklaşırken yumuşakça
-  // yavaşlar, aradaki boşlukta yeniden hızlanır. Yavaşlama bölgesi eser
-  // aralığından (3.7 m) dar tutulmalı — genişletilirse bölgeler üst üste
-  // biner ve tur ilk eserden sonra bir daha hızlanamaz.
+  // Tur modu: hol boyunca tek ve sabit tempoda yürüyüş. (Eser önünde
+  // yavaşlayıp arada hızlanma denendi; iniş-çıkış keyifli bulunmadı.)
   if (turModu && gezintiAktif) {
     hiz.x = 0;
-    const pz = controls.getObject().position.z;
-    let enYakin = Infinity;
-    for (let i = 0; i < eserler.length; i++) {
-      const d = Math.abs(pz - eserler[i].parent.position.z);
-      if (d < enYakin) enYakin = d;
-    }
-    const gecis = THREE.MathUtils.smoothstep(enYakin, 0.7, 1.8);
-    hiz.z = -(0.9 + gecis * 1.9); // eser önünde 0.9, aralarda 2.8 m/sn
+    hiz.z = -1.3;
   }
 
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
@@ -1055,6 +1046,9 @@ function yereBirak(p) {
   _yaprakOlcek.setScalar(0.85 + Math.random() * 0.35);
   _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
   yerde.setMatrixAt(idx, _yaprakMatrisi);
+  // Kısmi yükleme: her inişte 24k'lık buffer'ın tamamı değil,
+  // yalnızca bu yaprağın 16 float'ı GPU'ya gitsin
+  yerde.instanceMatrix.addUpdateRange(idx * 16, 16);
   sakura.yerdeSayi++;
   yerde.count = Math.min(sakura.yerdeSayi, kapasite);
   yerde.instanceMatrix.needsUpdate = true;
@@ -1159,10 +1153,14 @@ let dokunBakisId = null;
 
 canvas.addEventListener("touchstart", (e) => {
   if (!gezintiAktif || lightboxAcik) return;
+  const joyKutu = joyZone ? joyZone.getBoundingClientRect() : null;
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
-    // Joystick bölgesine (sol alt 180px) dokunmadıysa bakış olarak al
-    if (t.clientX > 180 || t.clientY < innerHeight - 180) {
+    // Joystick'in üstüne veya hemen çevresine dokunulmadıysa bakış olarak al
+    const joystikte = joyKutu &&
+      t.clientX > joyKutu.left - 24 && t.clientX < joyKutu.right + 24 &&
+      t.clientY > joyKutu.top - 24 && t.clientY < joyKutu.bottom + 24;
+    if (!joystikte) {
       if (dokunBakisId !== null) continue; // zaten bir parmak bakıyor
       dokunBakisId = t.identifier;
       surukleModu = true;

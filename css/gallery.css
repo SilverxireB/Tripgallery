@@ -275,7 +275,8 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
 #joystick-zone {
   position: absolute;
   bottom: 30px;
-  left: 30px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 140px;
   height: 140px;
   border-radius: 50%;
