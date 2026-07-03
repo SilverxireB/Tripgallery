@@ -336,7 +336,9 @@ let sakura = null; // havada süzülen kiraz çiçeği yaprakları
 
 function holKur(fotoSayisi, baslik, aciklama) {
   const tarafBasina = Math.ceil(fotoSayisi / 2);
-  const W = 8.4, H = 5.2;
+  // Döngülü tur orta hattan yürüdüğü için hol bir tık dar tutuldu:
+  // eserler ~3.9 m bakış mesafesine gelir, plaketler yürürken okunur.
+  const W = 7.8, H = 5.2;
   // Hol, eser sayısına göre uzar: her esere 3.7 m + giriş/çıkış payı
   const L = Math.max(26, tarafBasina * 3.7 + 12);
   HOL = { W, L, H };
@@ -532,12 +534,14 @@ function holKur(fotoSayisi, baslik, aciklama) {
   scene.add(lobiIsik);
 
   // --- Kapı etrafındaki ayırıcı duvar (Lobi ile Galeri arası) ---
+  // Kapı boşluğu 2.9 m sabittir; yan paneller hol genişliğine uyarlanır
   const kapiDuvariGrup = new THREE.Group();
-  const solDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.75, H), duvarMat);
-  solDuvar.position.set(-2.825, H / 2, 0);
+  const yanPanelW = (W - 2.9) / 2;
+  const solDuvar = new THREE.Mesh(new THREE.PlaneGeometry(yanPanelW, H), duvarMat);
+  solDuvar.position.set(-(1.45 + yanPanelW / 2), H / 2, 0);
   kapiDuvariGrup.add(solDuvar);
-  const sagDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.75, H), duvarMat);
-  sagDuvar.position.set(2.825, H / 2, 0);
+  const sagDuvar = new THREE.Mesh(new THREE.PlaneGeometry(yanPanelW, H), duvarMat);
+  sagDuvar.position.set(1.45 + yanPanelW / 2, H / 2, 0);
   kapiDuvariGrup.add(sagDuvar);
   const ustDuvar = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 3.45), duvarMat);
   ustDuvar.position.set(0, 3.45 + (H - 3.45) / 2, 0);
@@ -559,6 +563,13 @@ function holKur(fotoSayisi, baslik, aciklama) {
   );
   kapiTabela.position.set(0, 4.3, L / 2 + 0.02); // Üst duvarın biraz önü
   scene.add(kapiTabela);
+
+  // Aynı tabela salonun içine de asılır: turun dönüş ayağında
+  // boş gri duvar yerine sergi başlığı karşılar
+  const kapiTabelaIc = kapiTabela.clone();
+  kapiTabelaIc.position.set(0, 4.3, L / 2 - 0.02);
+  kapiTabelaIc.rotation.y = Math.PI;
+  scene.add(kapiTabelaIc);
 
   // --- Giriş kapısı (Lobi ile hol arası çift kanatlı kapı) ---
   const kapiGrubu = new THREE.Group();
@@ -601,33 +612,9 @@ function holKur(fotoSayisi, baslik, aciklama) {
   kapiGrubu.position.set(0, 0, L / 2);
   scene.add(kapiGrubu);
 
-  // --- Banklar ---
-  const bankSayisi = Math.max(1, Math.floor((L - 12) / 9));
-  const ahsapMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.35, metalness: 0.05 });
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0x1a1713, roughness: 0.3, metalness: 0.8 });
-  for (let b = 0; b < bankSayisi; b++) {
-    const bz = -L / 2 + 10 + b * ((L - 14) / Math.max(bankSayisi - 1, 1));
-    const bank = new THREE.Group();
-    for (let cita = 0; cita < 3; cita++) {
-      const tahta = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 0.16), ahsapMat);
-      tahta.position.set(0, 0.5, (cita - 1) * 0.2);
-      bank.add(tahta);
-    }
-    for (const sx of [-1, 1]) {
-      const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.55), metalMat);
-      bacak.position.set(sx * 0.9, 0.25, 0);
-      bank.add(bacak);
-    }
-    const bGolge = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.8, 1.1),
-      new THREE.MeshBasicMaterial({ map: golgeDoku, transparent: true, opacity: 0.5, depthWrite: false })
-    );
-    bGolge.rotation.x = -Math.PI / 2;
-    bGolge.position.y = 0.015;
-    bank.add(bGolge);
-    bank.position.set(0, 0, bz);
-    scene.add(bank);
-  }
+  // Not: Orta hattaki banklar kaldırıldı — döngülü tur tam o hattan
+  // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
+  // kesintisiz yaprak halısına kalıyor.
 
   // --- Havada süzülen kiraz çiçeği yaprakları ---
   const yaprakSayisi = Math.min(1200, Math.floor(L * 10));
@@ -975,11 +962,11 @@ function hareketGuncelle(dt) {
     hiz.z += yon.z * ivme * dt;
   }
 
-  // Tur modu: hol boyunca tek ve sabit tempoda yürüyüş. (Eser önünde
-  // yavaşlayıp arada hızlanma denendi; iniş-çıkış keyifli bulunmadı.)
+  // Tur modu: hol boyunca tek ve sabit tempoda, iki uç arasında mekik.
+  // (Eser önünde yavaşlayıp arada hızlanma denendi; keyifli bulunmadı.)
   if (turModu && gezintiAktif) {
     hiz.x = 0;
-    hiz.z = -1.3;
+    hiz.z = 1.3 * turYon; // turYon -1: salonun sonuna, +1: kapıya dönüş
   }
 
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
@@ -992,7 +979,11 @@ function hareketGuncelle(dt) {
     // Tur, bakış yönünden bağımsız hol ekseninde ilerler: eserlere dönüp
     // bakmak yürüyüşü duvara saptırıp durdurmaz.
     p.z += hiz.z * dt;
-    if (p.z <= -(HOL.L / 2 - 1.4)) turuDurdur(); // tanıtım duvarına varınca tur biter
+    p.x = THREE.MathUtils.damp(p.x, 0, 1.5, dt); // yumuşakça orta hatta süzül
+    // Döngü: iki uçta yön değiştir. Kapı tarafındaki dönüş noktası kapı
+    // sensörünün (4.2 m) dışında — kapı her turda açılıp kapanmasın.
+    if (turYon < 0 && p.z <= -(HOL.L / 2 - 1.6)) turCevir(1);
+    else if (turYon > 0 && p.z >= HOL.L / 2 - 4.6) turCevir(-1);
   } else {
     controls.moveForward(-hiz.z * dt);
   }
@@ -1134,6 +1125,7 @@ canvas.addEventListener("mousedown", (e) => {
 addEventListener("mousemove", (e) => {
   fareNDC.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   if (!surukleniyor) return;
+  turDonus = null; // kullanıcı bakınıyor: turun otomatik kamera dönüşünü bırak
   const dx = e.clientX - sonFareX;
   const dy = e.clientY - sonFareY;
   surukleMesafe += Math.abs(dx) + Math.abs(dy);
@@ -1178,6 +1170,7 @@ canvas.addEventListener("touchstart", (e) => {
 
 addEventListener("touchmove", (e) => {
   if (dokunBakisId === null || !surukleniyor) return;
+  turDonus = null; // kullanıcı bakınıyor: turun otomatik kamera dönüşünü bırak
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
     if (t.identifier === dokunBakisId) {
@@ -1264,10 +1257,36 @@ if (joyZone) {
 
 // ---------- Otomatik Tur Modu ----------
 let turModu = false;
+let turYon = -1;     // -1: salonun sonuna doğru, +1: kapıya dönüş
+let turDonus = null; // uçlarda kamerayı yürüyüş yönüne çeviren animasyon
+
+// Uçta yön değiştir ve kamerayı ~2.4 sn'de yeni yöne yumuşakça döndür
+function turCevir(yon) {
+  turYon = yon;
+  bakis.setFromQuaternion(camera.quaternion);
+  turDonus = { bas: bakis.y, hedef: yon < 0 ? 0 : Math.PI, t: 0 };
+}
+
+function turDonusGuncelle(dt) {
+  if (!turDonus) return;
+  turDonus.t = Math.min(turDonus.t + dt / 2.4, 1);
+  const k = THREE.MathUtils.smoothstep(turDonus.t, 0, 1);
+  let fark = turDonus.hedef - turDonus.bas;
+  fark = Math.atan2(Math.sin(fark), Math.cos(fark)); // en kısa yay
+  bakis.setFromQuaternion(camera.quaternion); // kullanıcının o anki eğimi korunur
+  bakis.y = turDonus.bas + fark * k;
+  camera.quaternion.setFromEuler(bakis);
+  if (turDonus.t >= 1) turDonus = null;
+}
+
+// Kullanıcı fareyle bakınmaya başlarsa otomatik dönüşü ona bırak
+controls.addEventListener("change", () => { turDonus = null; });
+
 const btnOtotur = qs("#btn-ototur");
 
 function turuDurdur() {
   turModu = false;
+  turDonus = null;
   if (btnOtotur) {
     btnOtotur.textContent = "✦ Otomatik Tur";
     btnOtotur.style.background = "";
@@ -1499,6 +1518,7 @@ async function baslat() {
     });
 
     hareketGuncelle(dt);
+    turDonusGuncelle(dt);
     hedefGuncelle();
     sakuraGuncelle(dt);
     renderer.render(scene, camera);
