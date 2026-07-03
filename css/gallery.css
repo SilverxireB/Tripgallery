@@ -17,12 +17,16 @@ body {
   font-family: "Inter", system-ui, sans-serif;
   overflow: hidden;
   height: 100vh;
+  overscroll-behavior: none; /* mobilde "çek-yenile" jesti sayfayı yenilemesin */
 }
 
 #sahne {
   position: fixed;
   inset: 0;
   display: block;
+  /* Tarayıcı kaydırma / çift-dokunma yakınlaştırma jestlerini devralmasın;
+     sürükleyerek bakış ancak bununla akıcı çalışır */
+  touch-action: none;
 }
 
 /* Sinematik vinyet — kenarlara doğru hafif kararma */
@@ -264,7 +268,6 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
 @media (max-width: 1024px), (pointer: coarse) {
   .lightbox-ic { grid-template-columns: 1fr; overflow-y: auto; }
   .lightbox-gorsel img { max-height: 42vh; }
-  #joystick-zone { display: block; }
   .kontroller { display: none; }
 }
 
@@ -273,11 +276,13 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
   position: absolute;
   bottom: 30px;
   left: 30px;
-  width: 130px;
-  height: 130px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  /* Parlak mermer zeminin üstünde de seçilebilsin diye koyu dolgu + belirgin kenar */
+  background: radial-gradient(circle, rgba(20, 16, 12, 0.28) 30%, rgba(20, 16, 12, 0.5) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.45);
   touch-action: none;
   display: none;
   pointer-events: auto;
@@ -288,12 +293,20 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+/* Dokunmatik cihazda joystick'i aç. DİKKAT: bu blok, yukarıdaki
+   "display: none" temel kuralından SONRA gelmek zorunda — aynı özgüllükte
+   son yazılan kural kazanır; öne taşınırsa joystick hiçbir cihazda görünmez. */
+@media (max-width: 1024px), (pointer: coarse) {
+  #joystick-zone { display: block; }
 }
 
 /* ===== Otomatik Tur Butonu ===== */

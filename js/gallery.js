@@ -641,6 +641,9 @@ function holKur(fotoSayisi, baslik, aciklama) {
   });
   const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, yaprakSayisi);
   yapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  // InstancedMesh'in kapsama küresi tek yaprağın geometrisinden hesaplanır;
+  // origin görüş dışına çıkınca TÜM yapraklar birden yok oluyordu. Kapat.
+  yapraklar.frustumCulled = false;
   const parcalar = [];
   for (let i = 0; i < yaprakSayisi; i++) {
     parcalar.push({
@@ -655,40 +658,29 @@ function holKur(fotoSayisi, baslik, aciklama) {
     });
   }
   scene.add(yapraklar);
-  sakura = { mesh: yapraklar, parcalar };
 
-  // --- Yerde birikmiş kiraz çiçeği yaprakları ---
-  const yerdeYaprakSayisi = Math.min(600, Math.floor(L * 8));
-  const yerdeGeo = new THREE.PlaneGeometry(0.09, 0.09);
-  const yerdeMat = new THREE.MeshBasicMaterial({
-    map: sakuraDokusu(),
-    transparent: true,
-    opacity: 0.85,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const yerdeYapraklar = new THREE.InstancedMesh(yerdeGeo, yerdeMat, yerdeYaprakSayisi);
-  const _m = new THREE.Matrix4();
-  const _q = new THREE.Quaternion();
-  const _e = new THREE.Euler();
-  const _s = new THREE.Vector3();
-  for (let i = 0; i < yerdeYaprakSayisi; i++) {
-    const px = (Math.random() - 0.5) * W * 0.95;
-    const pz = (Math.random() - 0.5) * (L + 6);
-    const py = 0.02 + Math.random() * 0.03; // zeminin hemen üstü
-    _e.set(
-      -Math.PI / 2 + (Math.random() - 0.5) * 0.4, // neredeyse yatay
-      Math.random() * Math.PI * 2, // rastgele yön
-      (Math.random() - 0.5) * 0.3
-    );
-    _q.setFromEuler(_e);
-    const sc = 0.7 + Math.random() * 0.6;
-    _s.set(sc, sc, sc);
-    _m.compose(new THREE.Vector3(px, py, pz), _q, _s);
-    yerdeYapraklar.setMatrixAt(i, _m);
-  }
-  yerdeYapraklar.instanceMatrix.needsUpdate = true;
+  // --- Yere düşen yaprakların biriktiği katman ---
+  // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
+  // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
+  // Kapasite dolunca en eski yaprağın yeri sessizce yeniden kullanılır.
+  const YERDE_KAPASITE = 6000;
+  const yerdeYapraklar = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(0.09, 0.09),
+    new THREE.MeshBasicMaterial({
+      map: sakuraDokusu(),
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+    YERDE_KAPASITE
+  );
+  yerdeYapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  yerdeYapraklar.frustumCulled = false;
+  yerdeYapraklar.count = 0; // boş başlar, düşen her yaprakla artar
   scene.add(yerdeYapraklar);
+
+  sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0 };
 
   // --- Genel ışık ve atmosfer ---
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
@@ -864,7 +856,10 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
 // Fare kilidi (pointer lock) her ortamda çalışmaz (ör. gömülü paneller).
 // Alınamazsa "sürükle-bak" moduna düşeriz.
 let gezintiAktif = false;
-let surukleModu = false;
+// Dokunmatik cihazda fare kilidi (pointer lock) hiç denenmez: kimi mobil
+// tarayıcı kilidi "başarıyla" alıp anında bırakıyor ve gezinti kilitleniyordu.
+const DOKUNMATIK = matchMedia("(pointer: coarse)").matches;
+let surukleModu = DOKUNMATIK;
 let kilitCalisti = false;
 let kapiAcik = false;
 let kapiAcilmaOrani = 0;
@@ -973,24 +968,27 @@ function hareketGuncelle(dt) {
     }
 
     const yon = new THREE.Vector3(kx, 0, kz);
-    if (yon.lengthSq() > 0) yon.normalize();
+    // Yalnızca 1'i aşan vektörü normalize et: klavyede çapraz gidiş
+    // hızlanmaz, joystick'in kısmi itişi ise analog kalır.
+    if (yon.lengthSq() > 1) yon.normalize();
     hiz.x += yon.x * ivme * dt;
     hiz.z += yon.z * ivme * dt;
   }
 
-  // Tur modu: sabit ileri yürüyüş
+  // Tur modu: hol boyunca yürüyüş; eser hizasına yaklaşırken yumuşakça
+  // yavaşlar, aradaki boşlukta yeniden hızlanır. Yavaşlama bölgesi eser
+  // aralığından (3.7 m) dar tutulmalı — genişletilirse bölgeler üst üste
+  // biner ve tur ilk eserden sonra bir daha hızlanamaz.
   if (turModu && gezintiAktif) {
-    let turHizi = -2.2; // Sabit ileri hiz
     hiz.x = 0;
-    // Eserin önünde yavaşla
     const pz = controls.getObject().position.z;
+    let enYakin = Infinity;
     for (let i = 0; i < eserler.length; i++) {
-      if (Math.abs(pz - eserler[i].parent.position.z) < 2.0) {
-        turHizi = -0.6; // Eser önünde yavaş
-        break;
-      }
+      const d = Math.abs(pz - eserler[i].parent.position.z);
+      if (d < enYakin) enYakin = d;
     }
-    hiz.z = turHizi;
+    const gecis = THREE.MathUtils.smoothstep(enYakin, 0.7, 1.8);
+    hiz.z = -(0.9 + gecis * 1.9); // eser önünde 0.9, aralarda 2.8 m/sn
   }
 
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
@@ -999,7 +997,14 @@ function hareketGuncelle(dt) {
   const oncekiZ = p.z;
 
   controls.moveRight(hiz.x * dt);
-  controls.moveForward(-hiz.z * dt);
+  if (turModu && gezintiAktif) {
+    // Tur, bakış yönünden bağımsız hol ekseninde ilerler: eserlere dönüp
+    // bakmak yürüyüşü duvara saptırıp durdurmaz.
+    p.z += hiz.z * dt;
+    if (p.z <= -(HOL.L / 2 - 1.4)) turuDurdur(); // tanıtım duvarına varınca tur biter
+  } else {
+    controls.moveForward(-hiz.z * dt);
+  }
 
   p.x = THREE.MathUtils.clamp(p.x, -(HOL.W / 2 - 0.7), HOL.W / 2 - 0.7);
 
@@ -1028,6 +1033,34 @@ const _yaprakQ = new THREE.Quaternion();
 const _yaprakOlcek = new THREE.Vector3(1, 1, 1);
 const _yaprakPoz = new THREE.Vector3();
 
+// Yere değen yaprağı, o an göründüğü noktada birikinti katmanına sabitler.
+function yereBirak(p) {
+  const yerde = sakura.yerde;
+  const kapasite = yerde.instanceMatrix.count;
+  const idx = sakura.yerdeSayi % kapasite;
+  _yaprakPoz.set(
+    THREE.MathUtils.clamp(
+      p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
+      -(HOL.W / 2 - 0.1), HOL.W / 2 - 0.1
+    ),
+    0.015 + Math.random() * 0.03, // hafif yükseklik farkı: üst üste binince titreşim olmasın
+    p.z + Math.cos(zaman * p.sallanma * 0.8 + p.faz) * 0.2
+  );
+  _yaprakDonus.set(
+    -Math.PI / 2 + (Math.random() - 0.5) * 0.22, // yere serili, ucu belli belirsiz kalkık
+    Math.random() * Math.PI * 2,
+    (Math.random() - 0.5) * 0.18
+  );
+  _yaprakQ.setFromEuler(_yaprakDonus);
+  _yaprakOlcek.setScalar(0.85 + Math.random() * 0.35);
+  _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
+  yerde.setMatrixAt(idx, _yaprakMatrisi);
+  sakura.yerdeSayi++;
+  yerde.count = Math.min(sakura.yerdeSayi, kapasite);
+  yerde.instanceMatrix.needsUpdate = true;
+  _yaprakOlcek.setScalar(1); // havadaki yapraklar için ölçeği geri al
+}
+
 function sakuraGuncelle(dt) {
   if (!sakura) return;
   const { mesh, parcalar } = sakura;
@@ -1035,10 +1068,14 @@ function sakuraGuncelle(dt) {
     const p = parcalar[i];
     p.y -= p.dusme * dt;
     if (p.y < 0.05) {
-      // yere inen yaprak tavandan yeniden doğar
+      // yere inen yaprak düştüğü yerde kalır, birikintiye eklenir…
+      yereBirak(p);
+      // …ve gökyüzünden yepyeni bir yaprak doğar
       p.y = HOL.H - 0.3;
       p.x = (Math.random() - 0.5) * HOL.W * 0.9;
       p.z = (Math.random() - 0.5) * (HOL.L - 2);
+      p.faz = Math.random() * Math.PI * 2;
+      p.dusme = 0.12 + Math.random() * 0.22;
     }
     _yaprakPoz.set(
       p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
@@ -1133,6 +1170,9 @@ canvas.addEventListener("touchstart", (e) => {
       surukleMesafe = 0;
       sonFareX = t.clientX;
       sonFareY = t.clientY;
+      // Dokunulan noktayı nişangâh olarak kaydet ki parmak hiç
+      // kımıldamadan yapılan tek dokunuş da doğru eseri hedeflesin
+      fareNDC.set((t.clientX / innerWidth) * 2 - 1, -(t.clientY / innerHeight) * 2 + 1);
       break;
     }
   }
@@ -1183,13 +1223,15 @@ if (joyZone) {
     const dist = Math.hypot(dx, dy);
     if (dist > r) { dx = (dx / dist) * r; dy = (dy / dist) * r; }
     joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    joyX = dx / r;
-    joyY = dy / r;
+    // Merkezde ölü bölge: parmak titremesi istemsiz yürüyüşe dönüşmesin
+    if (dist < r * 0.16) { joyX = 0; joyY = 0; }
+    else { joyX = dx / r; joyY = dy / r; }
   }
 
   joyZone.addEventListener("touchstart", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (turModu) turuDurdur(); // joystick'e dokunmak otomatik turu keser
     const t = e.changedTouches[0];
     joyId = t.identifier;
     joyAktif = true;
@@ -1225,6 +1267,15 @@ if (joyZone) {
 // ---------- Otomatik Tur Modu ----------
 let turModu = false;
 const btnOtotur = qs("#btn-ototur");
+
+function turuDurdur() {
+  turModu = false;
+  if (btnOtotur) {
+    btnOtotur.textContent = "✦ Otomatik Tur";
+    btnOtotur.style.background = "";
+  }
+}
+
 if (btnOtotur) {
   btnOtotur.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1456,7 +1507,7 @@ async function baslat() {
   });
 
   // Tanılama (konsoldan erişim için)
-  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL };
+  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL, sakura, zamanOku: () => zaman };
 }
 
 baslat();
