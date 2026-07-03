@@ -4,10 +4,6 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 // ---------- Yardımcılar ----------
 const qs = (s) => document.querySelector(s);
@@ -46,12 +42,9 @@ RectAreaLightUniformsLib.init();
 
 const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.1, 300);
 
-// Son işleme: bloom ile ışıklar gerçekçi biçimde "taşar"
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.14, 0.35, 0.93);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
+// Not: Bloom/EffectComposer bilinçli olarak YOK. Composer tüm kareyi topluca
+// tone-mapping'den geçirdiği için fotoğrafların toneMapped=false koruması
+// deviriliyor ve renkleri soluyordu. Doğrudan render = aslına sadık fotoğraf.
 
 const controls = new PointerLockControls(camera, document.body);
 scene.add(controls.getObject());
@@ -60,7 +53,6 @@ addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
 });
 
 // ---------- Prosedürel dokular ----------
@@ -792,6 +784,111 @@ let kapiAcilmaOrani = 0;
 let kanatNesneleri = [];
 const fareNDC = new THREE.Vector2(0, 0);
 
+// ---------- Ses (WebAudio — dosyasız, sentezlenmiş) ----------
+let sesCtx = null;
+let sonAdim = 0;
+
+function sesBaslat() {
+  if (sesCtx) {
+    if (sesCtx.state === "suspended") sesCtx.resume();
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  sesCtx = new AC();
+
+  // Oda tonu: yumuşak kahverengi gürültü (havalandırma / uzak uğultu)
+  const sr = sesCtx.sampleRate;
+  const buf = sesCtx.createBuffer(1, sr * 4, sr);
+  const d = buf.getChannelData(0);
+  let son = 0;
+  for (let i = 0; i < d.length; i++) {
+    const beyaz = Math.random() * 2 - 1;
+    son = (son + 0.02 * beyaz) / 1.02;
+    d[i] = son * 3.5;
+  }
+  const kaynak = sesCtx.createBufferSource();
+  kaynak.buffer = buf;
+  kaynak.loop = true;
+  const filtre = sesCtx.createBiquadFilter();
+  filtre.type = "lowpass";
+  filtre.frequency.value = 320;
+  const kazanc = sesCtx.createGain();
+  kazanc.gain.value = 0.035;
+  kaynak.connect(filtre).connect(kazanc).connect(sesCtx.destination);
+  kaynak.start();
+}
+
+function gurultuTamponu(sure) {
+  const sr = sesCtx.sampleRate;
+  const buf = sesCtx.createBuffer(1, Math.max(1, Math.floor(sr * sure)), sr);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function adimSesi() {
+  if (!sesCtx) return;
+  const t = sesCtx.currentTime;
+  const src = sesCtx.createBufferSource();
+  src.buffer = gurultuTamponu(0.1);
+  const f = sesCtx.createBiquadFilter();
+  f.type = "bandpass";
+  f.frequency.value = 700 + Math.random() * 300;
+  f.Q.value = 0.9;
+  const g = sesCtx.createGain();
+  g.gain.setValueAtTime(0.11 + Math.random() * 0.05, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  src.connect(f).connect(g).connect(sesCtx.destination);
+  src.start(t);
+  src.stop(t + 0.12);
+}
+
+function kapiSesi(aciliyor) {
+  if (!sesCtx) return;
+  const t = sesCtx.currentTime;
+  // menteşe gıcırtısı: dar bantlı, yavaş süpürülen gürültü
+  const src = sesCtx.createBufferSource();
+  src.buffer = gurultuTamponu(0.9);
+  const f = sesCtx.createBiquadFilter();
+  f.type = "bandpass";
+  f.Q.value = 6;
+  f.frequency.setValueAtTime(aciliyor ? 240 : 420, t);
+  f.frequency.linearRampToValueAtTime(aciliyor ? 420 : 240, t + 0.8);
+  const g = sesCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.05, t + 0.15);
+  g.gain.linearRampToValueAtTime(0.0001, t + 0.85);
+  src.connect(f).connect(g).connect(sesCtx.destination);
+  src.start(t);
+  // sonda alçak bir "gump"
+  const osc = sesCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.value = 90;
+  const og = sesCtx.createGain();
+  og.gain.setValueAtTime(0.0001, t + 0.72);
+  og.gain.linearRampToValueAtTime(0.06, t + 0.76);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
+  osc.connect(og).connect(sesCtx.destination);
+  osc.start(t + 0.72);
+  osc.stop(t + 1);
+}
+
+function tikSesi() {
+  if (!sesCtx) return;
+  const t = sesCtx.currentTime;
+  const osc = sesCtx.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(1400, t);
+  osc.frequency.exponentialRampToValueAtTime(700, t + 0.07);
+  const g = sesCtx.createGain();
+  g.gain.setValueAtTime(0.05, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+  osc.connect(g).connect(sesCtx.destination);
+  osc.start(t);
+  osc.stop(t + 0.1);
+}
+
 // ---------- Hareket ----------
 const tuslar = new Set();
 addEventListener("keydown", (e) => tuslar.add(e.code));
@@ -818,25 +915,38 @@ function hareketGuncelle(dt) {
   }
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
 
+  const p = controls.getObject().position;
+  const oncekiZ = p.z;
+
   controls.moveRight(hiz.x * dt);
   controls.moveForward(-hiz.z * dt);
 
-  const p = controls.getObject().position;
   p.x = THREE.MathUtils.clamp(p.x, -(HOL.W / 2 - 0.7), HOL.W / 2 - 0.7);
-  
-  // Kapı tamamen açılmadıysa duvardan geçmeyi engelle
-  if (kapiAcilmaOrani < 0.6) {
-    if (p.z > HOL.L / 2 + 0.3) {
-      p.z = Math.max(p.z, HOL.L / 2 + 0.5);
-    } else if (p.z < HOL.L / 2 - 0.3) {
-      p.z = Math.min(p.z, HOL.L / 2 - 0.5);
-    }
+
+  // Lobi-galeri ayırıcı duvarı: kapı boşluğu (|x|<1.05) dışında her zaman katı;
+  // boşluktan geçiş yalnızca kapı yeterince açıkken mümkün.
+  // "Hangi taraftan geldiysen o tarafta kal" — itekleme yok, takılma yok.
+  const esik = HOL.L / 2;
+  const gecebilir = Math.abs(p.x) < 1.05 && kapiAcilmaOrani > 0.55;
+  if (!gecebilir) {
+    if (oncekiZ >= esik && p.z < esik + 0.35) { p.z = esik + 0.35; hiz.z = Math.max(hiz.z, 0); }
+    else if (oncekiZ < esik && p.z > esik - 0.35) { p.z = esik - 0.35; hiz.z = Math.min(hiz.z, 0); }
   }
+  // Kapı aralığından geçerken kasaya sürtme
+  if (Math.abs(p.z - esik) < 0.35) p.x = THREE.MathUtils.clamp(p.x, -1.0, 1.0);
+
   p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), HOL.L / 2 + 6.5);
 
   const tempo = Math.hypot(hiz.x, hiz.z);
   adimFazi += dt * tempo * 1.9;
   p.y = 1.7 + Math.sin(adimFazi) * Math.min(tempo / 40, 1) * 0.045;
+
+  // Her adımda (faz yarım tur döndüğünde) ayak sesi
+  const adimNo = Math.floor(adimFazi / Math.PI);
+  if (adimNo > sonAdim) {
+    sonAdim = adimNo;
+    if (gezintiAktif && tempo > 1.5) adimSesi();
+  }
 }
 
 function tozGuncelle() {
@@ -959,7 +1069,7 @@ document.body.addEventListener("click", (e) => {
   if (e.target.closest("button, a, input, textarea")) return;
   if (surukleModu && surukleMesafe > 6) return;
   if (performance.now() - girisZamani < 400) return; // giriş tıklaması eseri açmasın
-  
+  tikSesi();
   lightboxAc(hedefEser.userData.foto);
 });
 
@@ -986,9 +1096,13 @@ function gezintiDurdur() {
   }
 }
 
-// Fare kilidi hiç çalışmazsa sürükle-bak moduna geç
+// Fare kilidi hiç çalışmazsa sürükle-bak moduna geç.
+// girisDenendi şartı: bazı gömülü ortamlar kendiliğinden pointerlockerror
+// üretiyor; kullanıcı butona basmadan galeriye düşmeyelim.
+let girisDenendi = false;
+
 function surukleyeGec() {
-  if (kilitCalisti) return;
+  if (kilitCalisti || !girisDenendi) return;
   surukleModu = true;
   const fareIpucu = qs("#ipucu-fare");
   if (fareIpucu) fareIpucu.innerHTML = "<kbd>Fare</kbd> basılı tut & sürükle";
@@ -998,6 +1112,8 @@ function surukleyeGec() {
 document.addEventListener("pointerlockerror", surukleyeGec);
 
 btnGir.addEventListener("click", () => {
+  girisDenendi = true;
+  sesBaslat(); // AudioContext ancak kullanıcı jestiyle açılabilir
   if (surukleModu) { gezintiBaslat(); return; }
   const zamanlayici = setTimeout(surukleyeGec, 800);
   controls.addEventListener("lock", () => clearTimeout(zamanlayici), { once: true });
@@ -1078,17 +1194,21 @@ async function baslat() {
   renderer.setAnimationLoop(() => {
     const dt = Math.min(saat.getDelta(), 0.05);
     zaman += dt;
-    
-    // Mesafe bazlı otomatik kapı kontrolü
+
+    // Mesafe bazlı otomatik kapı: erken açılır ki yürüyüş hiç kesilmesin
     const kapiMesafe = Math.abs(pObj.position.z - (L / 2));
-    kapiAcik = (kapiMesafe < 2.5);
+    const kapiAcikYeni = gezintiAktif && kapiMesafe < 4.2;
+    if (kapiAcikYeni !== kapiAcik) {
+      kapiAcik = kapiAcikYeni;
+      kapiSesi(kapiAcik); // menteşe gıcırtısı
+    }
 
     // Kapı animasyonu
     if (kapiAcik) {
-      if (kapiAcilmaOrani < 1) kapiAcilmaOrani += dt * 1.5;
+      if (kapiAcilmaOrani < 1) kapiAcilmaOrani += dt * 2.0;
       if (kapiAcilmaOrani > 1) kapiAcilmaOrani = 1;
     } else {
-      if (kapiAcilmaOrani > 0) kapiAcilmaOrani -= dt * 1.5;
+      if (kapiAcilmaOrani > 0) kapiAcilmaOrani -= dt * 1.2;
       if (kapiAcilmaOrani < 0) kapiAcilmaOrani = 0;
     }
 
@@ -1101,7 +1221,7 @@ async function baslat() {
     hareketGuncelle(dt);
     hedefGuncelle();
     tozGuncelle();
-    composer.render();
+    renderer.render(scene, camera);
   });
 
   // Tanılama (konsoldan erişim için)
