@@ -261,7 +261,7 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
 
 .kapat:hover { background: rgba(201, 162, 39, 0.3); transform: rotate(90deg); }
 
-@media (max-width: 800px) {
+@media (max-width: 1024px), (pointer: coarse) {
   .lightbox-ic { grid-template-columns: 1fr; overflow-y: auto; }
   .lightbox-gorsel img { max-height: 42vh; }
   #joystick-zone { display: block; }

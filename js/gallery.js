@@ -978,18 +978,19 @@ function hareketGuncelle(dt) {
     hiz.z += yon.z * ivme * dt;
   }
 
-  // Tur modu: yavaş ve sabit ileri yürüyüş
+  // Tur modu: sabit ileri yürüyüş
   if (turModu && gezintiAktif) {
-    hiz.z = -12 * dt;
+    let turHizi = -2.2; // Sabit ileri hiz
     hiz.x = 0;
     // Eserin önünde yavaşla
     const pz = controls.getObject().position.z;
     for (let i = 0; i < eserler.length; i++) {
-      if (Math.abs(pz - eserler[i].parent.position.z) < 2.5) {
-        hiz.z *= 0.35;
+      if (Math.abs(pz - eserler[i].parent.position.z) < 2.0) {
+        turHizi = -0.6; // Eser önünde yavaş
         break;
       }
     }
+    hiz.z = turHizi;
   }
 
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
