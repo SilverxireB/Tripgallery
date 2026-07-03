@@ -10,6 +10,8 @@ const qs = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const GEZI = params.get("gezi") || "japonya";
 const NOT_ANAHTARI = `galeriNotlar:${GEZI}`;
+// Yayın modu: notlar salt okunur. Sahibi ?duzenle=1 ile düzenlemeyi açabilir.
+const DUZENLE = params.get("duzenle") === "1";
 
 function yerelNotlar() {
   try { return JSON.parse(localStorage.getItem(NOT_ANAHTARI)) || {}; }
@@ -154,6 +156,32 @@ function golgeDokusu() {
   return new THREE.CanvasTexture(c);
 }
 
+function sakuraDokusu() {
+  // Tek bir kiraz çiçeği yaprağı: uçta hafif çentikli, pembe degrade
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(32, 40, 4, 32, 32, 30);
+  g.addColorStop(0, "#fff0f4");
+  g.addColorStop(0.55, "#ffd3df");
+  g.addColorStop(1, "#f8a8bf");
+  x.fillStyle = g;
+  x.beginPath();
+  x.moveTo(32, 6);            // uç (çentik yanı)
+  x.quadraticCurveTo(20, 2, 14, 14);
+  x.quadraticCurveTo(4, 30, 20, 48);
+  x.quadraticCurveTo(30, 58, 32, 58);
+  x.quadraticCurveTo(34, 58, 44, 48);
+  x.quadraticCurveTo(60, 30, 50, 14);
+  x.quadraticCurveTo(44, 2, 36, 8);
+  x.quadraticCurveTo(34, 12, 32, 6); // uçtaki minik çentik
+  x.closePath();
+  x.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function isikGoluDokusu() {
   // Çok eser olduğunda gerçek spot yerine kullanılan duvar ışık yıkaması
   const c = document.createElement("canvas");
@@ -210,7 +238,7 @@ function plaketDokusuCiz(baslik, not) {
 
   x.fillStyle = "#4a4234";
   x.font = "italic 23px Georgia, serif";
-  const notSatirlar = metniSar(x, not || "Henüz not eklenmemiş — esere tıklayıp yazabilirsin.", 440);
+  const notSatirlar = metniSar(x, not || "", 440);
   for (const s of notSatirlar.slice(0, 6)) {
     x.fillText(s, 36, y);
     y += 32;
@@ -278,7 +306,7 @@ const golgeDoku = golgeDokusu();
 const cevizDoku = cevizDokusu();
 const isikGolu = isikGoluDokusu();
 let HOL = { W: 8, L: 40, H: 5.2 };
-let toz = null; // havada süzülen zerreler
+let sakura = null; // havada süzülen kiraz çiçeği yaprakları
 
 function holKur(fotoSayisi, baslik, aciklama) {
   const tarafBasina = Math.ceil(fotoSayisi / 2);
@@ -575,33 +603,33 @@ function holKur(fotoSayisi, baslik, aciklama) {
     scene.add(bank);
   }
 
-  // --- Havada süzülen toz zerreleri (ışık huzmesi hissi) ---
-  const tozSayisi = Math.min(600, Math.floor(L * 9));
-  const pozlar = new Float32Array(tozSayisi * 3);
-  const tabanY = new Float32Array(tozSayisi);
-  const fazlar = new Float32Array(tozSayisi);
-  for (let i = 0; i < tozSayisi; i++) {
-    pozlar[i * 3] = (Math.random() - 0.5) * W * 0.85;
-    tabanY[i] = 0.5 + Math.random() * (H - 1.2);
-    pozlar[i * 3 + 1] = tabanY[i];
-    pozlar[i * 3 + 2] = (Math.random() - 0.5) * (L - 3);
-    fazlar[i] = Math.random() * Math.PI * 2;
+  // --- Havada süzülen kiraz çiçeği yaprakları ---
+  const yaprakSayisi = Math.min(420, Math.floor(L * 5));
+  const yaprakGeo = new THREE.PlaneGeometry(0.085, 0.085);
+  const yaprakMat = new THREE.MeshBasicMaterial({
+    map: sakuraDokusu(),
+    transparent: true,
+    opacity: 0.92,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, yaprakSayisi);
+  yapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const parcalar = [];
+  for (let i = 0; i < yaprakSayisi; i++) {
+    parcalar.push({
+      x: (Math.random() - 0.5) * W * 0.9,
+      y: Math.random() * H,
+      z: (Math.random() - 0.5) * (L - 2),
+      dusme: 0.12 + Math.random() * 0.22,     // düşüş hızı (m/sn)
+      sallanma: 0.4 + Math.random() * 0.7,    // yatay salınım genliği
+      faz: Math.random() * Math.PI * 2,
+      donme: (Math.random() - 0.5) * 2.2,     // takla hızı
+      egim: Math.random() * Math.PI * 2,
+    });
   }
-  const tozGeo = new THREE.BufferGeometry();
-  tozGeo.setAttribute("position", new THREE.BufferAttribute(pozlar, 3));
-  const tozMesh = new THREE.Points(
-    tozGeo,
-    new THREE.PointsMaterial({
-      color: 0xfff3dd,
-      size: 0.02,
-      transparent: true,
-      opacity: 0.35,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
-  );
-  scene.add(tozMesh);
-  toz = { mesh: tozMesh, tabanY, fazlar };
+  scene.add(yapraklar);
+  sakura = { mesh: yapraklar, parcalar };
 
   // --- Genel ışık ve atmosfer ---
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
@@ -914,14 +942,39 @@ function hareketGuncelle(dt) {
   p.y = 1.7 + Math.sin(adimFazi) * Math.min(tempo / 40, 1) * 0.045;
 }
 
-function tozGuncelle() {
-  if (!toz) return;
-  const poz = toz.mesh.geometry.attributes.position;
-  for (let i = 0; i < poz.count; i++) {
-    poz.array[i * 3 + 1] = toz.tabanY[i] + Math.sin(zaman * 0.22 + toz.fazlar[i]) * 0.45;
-    poz.array[i * 3] += Math.sin(zaman * 0.13 + toz.fazlar[i] * 2) * 0.0006;
+const _yaprakMatrisi = new THREE.Matrix4();
+const _yaprakDonus = new THREE.Euler();
+const _yaprakQ = new THREE.Quaternion();
+const _yaprakOlcek = new THREE.Vector3(1, 1, 1);
+const _yaprakPoz = new THREE.Vector3();
+
+function sakuraGuncelle(dt) {
+  if (!sakura) return;
+  const { mesh, parcalar } = sakura;
+  for (let i = 0; i < parcalar.length; i++) {
+    const p = parcalar[i];
+    p.y -= p.dusme * dt;
+    if (p.y < 0.05) {
+      // yere inen yaprak tavandan yeniden doğar
+      p.y = HOL.H - 0.3;
+      p.x = (Math.random() - 0.5) * HOL.W * 0.9;
+      p.z = (Math.random() - 0.5) * (HOL.L - 2);
+    }
+    _yaprakPoz.set(
+      p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
+      p.y,
+      p.z + Math.cos(zaman * p.sallanma * 0.8 + p.faz) * 0.2
+    );
+    _yaprakDonus.set(
+      zaman * p.donme + p.faz,
+      p.egim + Math.sin(zaman * 0.6 + p.faz) * 0.6,
+      p.faz
+    );
+    _yaprakQ.setFromEuler(_yaprakDonus);
+    _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
+    mesh.setMatrixAt(i, _yaprakMatrisi);
   }
-  poz.needsUpdate = true;
+  mesh.instanceMatrix.needsUpdate = true;
 }
 
 // ---------- Nişangâh & etkileşim ----------
@@ -992,6 +1045,15 @@ const lbNot = qs("#lb-not");
 const kayitMesaj = qs("#kayit-mesaj");
 let acikFoto = null;
 let lightboxAcik = false;
+
+// Yayın modunda inceleme paneli salt okunur
+if (!DUZENLE) {
+  lbBaslik.readOnly = true;
+  lbNot.readOnly = true;
+  qs("#btn-kaydet").style.display = "none";
+  const ipucuSatiri = qs("#not-ipucu");
+  if (ipucuSatiri) ipucuSatiri.style.display = "none";
+}
 
 function lightboxAc(foto) {
   acikFoto = foto;
@@ -1124,11 +1186,15 @@ async function baslat() {
     return;
   }
 
-  const kayitli = yerelNotlar();
-  for (const f of veri.fotograflar) {
-    if (kayitli[f.id]) {
-      f.baslik = kayitli[f.id].baslik ?? f.baslik;
-      f.not = kayitli[f.id].not ?? f.not;
+  // Yerel not değişiklikleri yalnızca düzenleme modunda uygulanır;
+  // ziyaretçiler her zaman manifestteki metinleri görür.
+  if (DUZENLE) {
+    const kayitli = yerelNotlar();
+    for (const f of veri.fotograflar) {
+      if (kayitli[f.id]) {
+        f.baslik = kayitli[f.id].baslik ?? f.baslik;
+        f.not = kayitli[f.id].not ?? f.not;
+      }
     }
   }
 
@@ -1190,7 +1256,7 @@ async function baslat() {
 
     hareketGuncelle(dt);
     hedefGuncelle();
-    tozGuncelle();
+    sakuraGuncelle(dt);
     renderer.render(scene, camera);
   });
 

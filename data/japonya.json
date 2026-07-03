@@ -121,6 +121,276 @@
       "kaynak": "https://lh3.googleusercontent.com/pw/AP1GczMf_IB_sM6DH0EtG0SHtxO_dIMD0Kw5ufAlGsBP-8vIqeu0o7hfshOSwP04YB-vy01SFavftS6NYAnYf2kfi4w-322OhPZsCl6yVAj6CZAxZQwk7aK0",
       "baslik": "Hogwarts Günbatımı",
       "not": "Büyücülük dünyasının kalesi günbatımında. Baba-kız resmen büyülendik."
+    },
+    {
+      "id": "wa001",
+      "src": "assets/japonya/wa001.jpg",
+      "baslik": "Uçakta Pasta Sürprizi",
+      "not": "Daha havadayken kutlama başladı: doğum günü pastası uçakta açıldı."
+    },
+    {
+      "id": "wa002",
+      "src": "assets/japonya/wa002.jpg",
+      "baslik": "Welcome Suica",
+      "not": "Tokyo’nun anahtarı: sakura desenli Suica kartlarımız. Bip bip, her kapı açık."
+    },
+    {
+      "id": "wa003",
+      "src": "assets/japonya/wa003.jpg",
+      "baslik": "Pelüş Avcısı",
+      "not": "GiGO salonunda pençe makinesi turu. Hedef belli: Pochacco’lar."
+    },
+    {
+      "id": "wa004",
+      "src": "assets/japonya/wa004.jpg",
+      "baslik": "Glico Adamı’yla Yarış",
+      "not": "Dotonbori’nin efsane koşucusu arkada; bizimki kollarını açmış, finişi çoktan geçmiş."
+    },
+    {
+      "id": "wa005",
+      "src": "assets/japonya/wa005.jpg",
+      "baslik": "Yakiniku Akşamı",
+      "not": "Közün başında üçümüz. Stitch de masada — o artık aileden."
+    },
+    {
+      "id": "wa006",
+      "src": "assets/japonya/wa006.jpg",
+      "baslik": "Tempozan’ın Tepesinde",
+      "not": "Osaka limanı ayaklarımızın altında; dev dönme dolabın camlı kabininde aile selfie’si."
+    },
+    {
+      "id": "wa007",
+      "src": "assets/japonya/wa007.jpg",
+      "baslik": "Ramen Ustası",
+      "not": "Çubuklarla ilk ciddi sınav. Sonuç: kase bitti, gurur tavan."
+    },
+    {
+      "id": "wa008",
+      "src": "assets/japonya/wa008.jpg",
+      "baslik": "Geyiğe Sarılmak",
+      "not": "Nara’da cesaret patlaması: krakerler bitince sıra sarılmaya geldi."
+    },
+    {
+      "id": "wa009",
+      "src": "assets/japonya/wa009.jpg",
+      "baslik": "Kraker Diplomasisi",
+      "not": "Nazik ama kararlı bir müzakereci: bir kraker, bir reverans."
+    },
+    {
+      "id": "wa010",
+      "src": "assets/japonya/wa010.jpg",
+      "baslik": "Dotonbori Gecesi",
+      "not": "Neonlar, kalabalık ve elde limon sour — Osaka gecesi tam formunda."
+    },
+    {
+      "id": "wa011",
+      "src": "assets/japonya/wa011.jpg",
+      "baslik": "Bowser Provası",
+      "not": "Mağazada kostüm denemesi: Bowser kafası bizimkine biraz büyük."
+    },
+    {
+      "id": "wa012",
+      "src": "assets/japonya/wa012.jpg",
+      "baslik": "Tatamide Sessizlik",
+      "not": "Kyoto’da dev bir tapınak salonu; baba-kız tatamiye oturup sessizliği dinledi."
+    },
+    {
+      "id": "wa013",
+      "src": "assets/japonya/wa013.jpg",
+      "baslik": "Mochi Şovu",
+      "not": "Nara’nın meşhur mochi dövücüleri naralarıyla hamura hayat verdi; biz de çilekli taze mochi kaptık."
+    },
+    {
+      "id": "wa014",
+      "src": "assets/japonya/wa014.jpg",
+      "baslik": "Togetsukyo Köprüsünde",
+      "not": "Arashiyama’nın asırlık köprüsünde; fonda Katsura nehri ve yeşil tepeler."
+    },
+    {
+      "id": "wa015",
+      "src": "assets/japonya/wa015.jpg",
+      "baslik": "Grogu’yla Tanışma",
+      "not": "Yıldızların altında kundakta bir Bebek Yoda. Baba-kız resmen eridi."
+    },
+    {
+      "id": "wa016",
+      "src": "assets/japonya/wa016.jpg",
+      "baslik": "Yasaka Pagodası’na Doğru",
+      "not": "Kyoto’nun arka sokaklarında yürürken pagoda her köşeden selam veriyor."
+    },
+    {
+      "id": "wa017",
+      "src": "assets/japonya/wa017.jpg",
+      "baslik": "Kimono Kanatları",
+      "not": "Senso-ji’nin önünde kollar havada: kimono bir anda kanat oldu."
+    },
+    {
+      "id": "wa018",
+      "src": "assets/japonya/wa018.jpg",
+      "baslik": "Akvaryum Penceresi",
+      "not": "Cam kenarında nefes kesen bir an; penguen süzülüp selam verdi."
+    },
+    {
+      "id": "wa019",
+      "src": "assets/japonya/wa019.jpg",
+      "baslik": "Pagoda ve Poz",
+      "not": "Higashiyama’da eller belde: turist değil, mahalleli edası."
+    },
+    {
+      "id": "wa020",
+      "src": "assets/japonya/wa020.jpg",
+      "baslik": "Dev Kapının Eşiğinde",
+      "not": "Ahşap verandada çoraplı ayaklar; arkada Kyoto’nun dev tapınak kapısı."
+    },
+    {
+      "id": "wa021",
+      "src": "assets/japonya/wa021.jpg",
+      "baslik": "Denizanası Baleti",
+      "not": "Karanlıkta süzülen beyaz şemsiyeler; ikimiz de büyülendik, fısıltıyla konuştuk."
+    },
+    {
+      "id": "wa022",
+      "src": "assets/japonya/wa022.jpg",
+      "baslik": "Universal Kapısında",
+      "not": "Küre döner, bayraklar dalgalanır; bugün çizgi filmin içindeyiz."
+    },
+    {
+      "id": "wa023",
+      "src": "assets/japonya/wa023.jpg",
+      "baslik": "Metroda Bir Turist",
+      "not": "Osaka metrosunda tutamağa uzanan minik bir el; vagonun en rahatı o."
+    },
+    {
+      "id": "wa024",
+      "src": "assets/japonya/wa024.jpg",
+      "baslik": "Bambuların Arasında",
+      "not": "Arashiyama’nın yeşil koridoru; baba poz konusunda gayet ciddi."
+    },
+    {
+      "id": "wa025",
+      "src": "assets/japonya/wa025.jpg",
+      "baslik": "Yağmurda 35 Mum",
+      "not": "Dotonbori’nin ıslak taşlarında elde cheesecake: en güzel doğum günü sahnesi."
+    },
+    {
+      "id": "wa026",
+      "src": "assets/japonya/wa026.jpg",
+      "baslik": "Fener Duvarı",
+      "not": "Kura Sushi’nin fener duvarı önünde; kucakta Marie, karınlar tok, keyifler yerinde."
+    },
+    {
+      "id": "wa027",
+      "src": "assets/japonya/wa027.jpg",
+      "baslik": "Mario ve Peach",
+      "not": "Baba Mario, kızı Peach: Nintendo Dünyası’nda görev dağılımı net."
+    },
+    {
+      "id": "wa028",
+      "src": "assets/japonya/wa028.jpg",
+      "baslik": "Küçük Hanımın Çantası",
+      "not": "Kimononun en tatlı detayı: çiçekli çanta, tabi çoraplar ve minik zori’ler."
+    },
+    {
+      "id": "wa029",
+      "src": "assets/japonya/wa029.jpg",
+      "baslik": "Bambu Yolu",
+      "not": "Anne-kız bambuların gölgesinde; ışık yapraklardan süzülüyor."
+    },
+    {
+      "id": "wa030",
+      "src": "assets/japonya/wa030.jpg",
+      "baslik": "Torii Koridorunda",
+      "not": "Fushimi Inari’nin sonsuz kapıları; baba-kız kırmızının içinde kayboldu."
+    },
+    {
+      "id": "wa031",
+      "src": "assets/japonya/wa031.jpg",
+      "baslik": "Saç Örgüsünde Sakura",
+      "not": "Örgülerde inciler, saçta kiraz çiçeği; Senso-ji fonda, bahar bizimle."
+    },
+    {
+      "id": "wa032",
+      "src": "assets/japonya/wa032.jpg",
+      "baslik": "Aslan Tapınağı",
+      "not": "Namba Yasaka’nın dev aslan ağzı arkamızda; Stitch dahil herkes gülümsüyor."
+    },
+    {
+      "id": "wa033",
+      "src": "assets/japonya/wa033.jpg",
+      "baslik": "Kinopio Kafe",
+      "not": "Mantar Krallığı’nda öğle yemeği: 67 numaralı sipariş ve üç zafer yumruğu."
+    },
+    {
+      "id": "wa034",
+      "src": "assets/japonya/wa034.jpg",
+      "baslik": "Koşucunun Önünde",
+      "not": "Glico adamı 90 yıldır koşuyor; baba bir poz için durdurdu."
+    },
+    {
+      "id": "wa035",
+      "src": "assets/japonya/wa035.jpg",
+      "baslik": "Nara’ya Varış",
+      "not": "Daha gerçek geyikleri görmeden istasyondakilere sarıldık bile."
+    },
+    {
+      "id": "wa036",
+      "src": "assets/japonya/wa036.jpg",
+      "baslik": "Kimono Selfie’si",
+      "not": "İki kimonolu, bir telefon: Asakusa’da anne-kız fotoğraf mesaisi."
+    },
+    {
+      "id": "wa037",
+      "src": "assets/japonya/wa037.jpg",
+      "baslik": "Hanami Dango",
+      "not": "Pembe, beyaz, yeşil: üç renk, üç el, tek lezzet. Sokak klasiği."
+    },
+    {
+      "id": "wa038",
+      "src": "assets/japonya/wa038.jpg",
+      "baslik": "Matcha Mont Blanc",
+      "not": "Ginza’da tel tel matcha: dondurma değil, sanat eseri."
+    },
+    {
+      "id": "wa039",
+      "src": "assets/japonya/wa039.jpg",
+      "baslik": "Kristal Evrende Bir Öpücük",
+      "not": "teamLab’in ışık evreninde babaya kondurulan minik bir teşekkür."
+    },
+    {
+      "id": "wa040",
+      "src": "assets/japonya/wa040.jpg",
+      "baslik": "Işık Yağmuru",
+      "not": "Milyonlarca kristal ipin ortasında baba-kız; ayna zemin sonsuzluğa açılıyor."
+    },
+    {
+      "id": "wa041",
+      "src": "assets/japonya/wa041.jpg",
+      "baslik": "Çiçekler Arasında",
+      "not": "Tavandan sarkan orkide bahçesinde iki eli yanaklarında bir mutluluk."
+    },
+    {
+      "id": "wa042",
+      "src": "assets/japonya/wa042.jpg",
+      "baslik": "Meiji’nin Kapısı",
+      "not": "Ormanın içinde dev ahşap torii; şehrin gürültüsü tam burada bitiyor."
+    },
+    {
+      "id": "wa043",
+      "src": "assets/japonya/wa043.jpg",
+      "baslik": "Tokyo Kulesi ve Annesi",
+      "not": "Kırmızı-beyaz dev fonda; kavşakta bir saniyelik şık poz."
+    },
+    {
+      "id": "wa044",
+      "src": "assets/japonya/wa044.jpg",
+      "baslik": "Kule Benim!",
+      "not": "Kollar açık, gülüş kocaman: Tokyo Kulesi artık onun."
+    },
+    {
+      "id": "wa045",
+      "src": "assets/japonya/wa045.jpg",
+      "baslik": "Charmander’la Dönüş",
+      "not": "Dönüş uçağı: baba ve Charmander birlikte fişi çekti. Gezi bitti, anılar tam."
     }
   ]
 }
