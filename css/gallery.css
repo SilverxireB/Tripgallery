@@ -38,6 +38,22 @@ body {
   background: radial-gradient(ellipse 75% 65% at 50% 48%, transparent 60%, rgba(0, 0, 0, 0.42) 100%);
 }
 
+/* Sinematik film taneciği — dokuyu JS üretir, buradan yalnızca kıpırdatılır */
+#gren {
+  position: fixed;
+  inset: -140px;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-repeat: repeat;
+  animation: gren-kip 0.5s steps(5) infinite;
+}
+
+@keyframes gren-kip {
+  to { transform: translate(128px, 128px); }
+}
+
 .hidden { display: none !important; }
 
 .dim { color: var(--text-dim); }
@@ -266,8 +282,8 @@ textarea:focus { border-color: rgba(201, 162, 39, 0.5); }
   height: 140px;
   border-radius: 50%;
   /* Parlak mermer zeminin üstünde de seçilebilsin diye koyu dolgu + belirgin kenar */
-  background: radial-gradient(circle, rgba(20, 16, 12, 0.28) 30%, rgba(20, 16, 12, 0.5) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: radial-gradient(circle, rgba(20, 16, 12, 0.45) 30%, rgba(20, 16, 12, 0.68) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.75);
   box-shadow: 0 3px 16px rgba(0, 0, 0, 0.45);
   touch-action: none;
   display: none;
