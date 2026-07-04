@@ -945,28 +945,45 @@ function sesBaslat() {
 
 // ---------- Videowall: holün sonundaki tam boy sinevizyon ----------
 // Karşı duvar, fotoğrafların yumuşak çapraz geçişle döndüğü dev bir
-// ekrandır. Başlık duvarı altta kalır: ilk kare yüklenene dek görünür.
+// ekrandır. İki önemli tasarım kararı:
+//  1) MESAFE KAPISI: ekran yalnızca oyuncu son eserlere yaklaşınca belirir.
+//     Uzaktayken panel tamamen GİZLİ -> aynadaki (Reflector) yansımaya hiç
+//     girmez. Böylece "hareket edince yansıma yetişemiyor / beyaza dönüyor"
+//     sorunu kökten kalkar; yakında ise yansıma zaten sorunsuz.
+//  2) KIRPMA YOK: fotoğraf tam haliyle ortaya sığdırılır (contain); kalan
+//     boşluk, aynı fotoğrafın flu ve koyulaştırılmış hali ile doldurulur.
+//     Böylece hiçbir karede insan/manzara kesilmez.
 // Bellek dostu: aynı anda en fazla iki doku tutulur, eskisi dispose edilir.
 const VW_GOSTERIM = 4.2; // bir karenin ekranda kalma süresi (sn)
 const VW_GECIS = 1.2;    // çapraz geçiş süresi (sn)
+const VW_MENZIL = 17;    // ekran arka duvara bu mesafede (m) belirmeye başlar
 let videowall = null;
 
-function videowallDokuHazirla(doku) {
-  doku.colorSpace = THREE.SRGBColorSpace;
-  doku.anisotropy = MAKS_ANIZO;
-  // Duvarı doldur (cover): oranı bozmadan ortadan kırp
-  const duvarOran = HOL.W / HOL.H;
-  const resimOran = doku.image.width / doku.image.height;
-  if (resimOran > duvarOran) {
-    const r = duvarOran / resimOran;
-    doku.repeat.set(r, 1);
-    doku.offset.set((1 - r) / 2, 0);
-  } else {
-    const r = resimOran / duvarOran;
-    doku.repeat.set(1, r);
-    doku.offset.set(0, (1 - r) / 2);
-  }
-  return doku;
+// Fotoğrafı kırpmadan duvara oturt: arka plan flu+koyu (cover), ön plan tam (contain)
+function videowallKareDokusu(img) {
+  const cw = 2048, ch = Math.round(cw * HOL.H / HOL.W);
+  const c = document.createElement("canvas");
+  c.width = cw; c.height = ch;
+  const x = c.getContext("2d");
+  const io = img.width / img.height;
+  const co = cw / ch;
+
+  // Arka plan: ekranı dolduracak şekilde büyüt (cover), flulaştır + karart
+  let bw, bh;
+  if (io > co) { bh = ch; bw = ch * io; } else { bw = cw; bh = cw / io; }
+  x.filter = "blur(26px) brightness(0.45)";
+  x.drawImage(img, (cw - bw) / 2, (ch - bh) / 2, bw, bh);
+  x.filter = "none";
+
+  // Ön plan: fotoğrafın tamamı sığacak şekilde (contain), kırpılmadan
+  let fw, fh;
+  if (io > co) { fw = cw; fh = cw / io; } else { fh = ch; fw = ch * io; }
+  x.drawImage(img, (cw - fw) / 2, (ch - fh) / 2, fw, fh);
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = MAKS_ANIZO;
+  return t;
 }
 
 function videowallKur(fotograflar) {
@@ -976,35 +993,53 @@ function videowallKur(fotograflar) {
     m.toneMapped = false; // fotoğraf renkleri solmasın
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(HOL.W, HOL.H), m);
     mesh.position.set(0, HOL.H / 2, z);
+    mesh.visible = false; // menzil dışında gizli -> yansımaya girmez
     scene.add(mesh);
     return mesh;
   };
   const alt = panelYap(-HOL.L / 2 + 0.035);
   const ust = panelYap(-HOL.L / 2 + 0.037);
-  videowall = { alt, ust, sira: 0, bekleme: 0, gecis: -1, yukleniyor: false, fotograflar };
+  videowall = { alt, ust, sira: 0, bekleme: 0, gecis: -1, yukleniyor: false,
+                fotograflar, gorunur: 0, ilkYuklendi: false };
   dokuYukleyici.load(fotograflar[0].src, (doku) => {
-    alt.material.map = videowallDokuHazirla(doku);
-    alt.material.opacity = 1;
+    alt.material.map = videowallKareDokusu(doku.image);
     alt.material.needsUpdate = true;
+    videowall.ilkYuklendi = true;
+    doku.dispose(); // kaynak GPU dokusu gerekmez; canvas dokusunu kullanıyoruz
   });
 }
 
 function videowallGuncelle(dt) {
   if (!videowall) return;
   const v = videowall;
+
+  // Mesafe kapısı: arka duvara uzaklık. Yakınken belir, uzaklaşınca sön.
+  const mesafe = controls.getObject().position.z + HOL.L / 2;
+  const hedef = (gezintiAktif && mesafe < VW_MENZIL) ? 1 : 0;
+  v.gorunur += (hedef - v.gorunur) * Math.min(dt * 2.5, 1);
+
+  v.alt.visible = v.ilkYuklendi && v.gorunur > 0.01;
+  v.alt.material.opacity = v.gorunur;
+
+  // Menzil dışında: döngü durur, yeni kare yüklenmez (yansıma da temiz kalır)
+  if (v.gorunur < 0.5) {
+    v.ust.visible = false;
+    return;
+  }
+
   if (v.gecis >= 0) {
     v.gecis += dt / VW_GECIS;
     const k = Math.min(v.gecis, 1);
-    v.ust.material.opacity = k * k * (3 - 2 * k); // smoothstep
+    v.ust.visible = true;
+    v.ust.material.opacity = (k * k * (3 - 2 * k)) * v.gorunur; // smoothstep × kapı
     if (k >= 1) {
       // Üstteki kare kalıcı görüntü oldu: alta indir, üstü boşalt
       const eski = v.alt.material.map;
       v.alt.material.map = v.ust.material.map;
-      v.alt.material.opacity = 1;
       v.alt.material.needsUpdate = true;
-      v.ust.material.opacity = 0;
       v.ust.material.map = null;
       v.ust.material.needsUpdate = true;
+      v.ust.visible = false;
       if (eski) eski.dispose();
       v.gecis = -1;
       v.bekleme = 0;
@@ -1018,9 +1053,10 @@ function videowallGuncelle(dt) {
         v.fotograflar[v.sira].src,
         (doku) => {
           v.yukleniyor = false;
-          v.ust.material.map = videowallDokuHazirla(doku);
+          v.ust.material.map = videowallKareDokusu(doku.image);
           v.ust.material.opacity = 0;
           v.ust.material.needsUpdate = true;
+          doku.dispose();
           v.gecis = 0;
         },
         undefined,
@@ -1709,7 +1745,8 @@ async function baslat() {
   });
 
   // Tanılama (konsoldan erişim için)
-  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL, sakura, zamanOku: () => zaman };
+  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL, sakura,
+    get __vw() { return videowall; }, zamanOku: () => zaman };
 }
 
 baslat();
