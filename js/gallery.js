@@ -345,27 +345,6 @@ function kapiDokusuCiz(baslik) {
 const eserler = [];
 const plaketler = new Map();
 const golgeDoku = golgeDokusu();
-
-// Spot ışığının zemine vurduğu sıcak havuz — cilalı taşta yumuşak parlama
-const zeminHavuzuDokusu = (() => {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const x = c.getContext("2d");
-  const g = x.createRadialGradient(128, 128, 8, 128, 128, 126);
-  g.addColorStop(0, "rgba(255, 238, 205, 0.55)");
-  g.addColorStop(0.55, "rgba(255, 234, 198, 0.18)");
-  g.addColorStop(1, "rgba(255, 232, 195, 0)");
-  x.fillStyle = g;
-  x.fillRect(0, 0, 256, 256);
-  return new THREE.CanvasTexture(c);
-})();
-const havuzMat = new THREE.MeshBasicMaterial({
-  map: zeminHavuzuDokusu,
-  transparent: true,
-  opacity: 0.3,
-  blending: THREE.AdditiveBlending,
-  depthWrite: false,
-});
 const cevizDoku = cevizDokusu();
 const isikGolu = isikGoluDokusu();
 let HOL = { W: 8, L: 40, H: 5.2 };
@@ -779,12 +758,6 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
     );
     golge.position.set(0, -0.05, 0.006);
     grup.add(golge);
-
-    // Spotun zemindeki sıcak ışık havuzu: eserin önünde, cilalı taş üstünde
-    const havuz = new THREE.Mesh(new THREE.PlaneGeometry(w + 1.1, 1.5), havuzMat);
-    havuz.rotation.x = -Math.PI / 2;
-    havuz.position.set(0, -1.7, 0.75); // grubun yerel uzayı: zemin hizası, duvardan içeri
-    grup.add(havuz);
 
     // Kesitli ceviz çerçeve (pahlı extrude profil)
     const cerceve = new THREE.Mesh(
