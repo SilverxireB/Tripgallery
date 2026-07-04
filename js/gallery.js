@@ -182,112 +182,6 @@ function sakuraDokusu() {
   return t;
 }
 
-function tatamiDokusu() {
-  // Çay odası zemini: hasır dokulu tatami, koyu kenar şeritleriyle
-  const c = document.createElement("canvas");
-  c.width = c.height = 512;
-  const x = c.getContext("2d");
-  x.fillStyle = "#b7a469";
-  x.fillRect(0, 0, 512, 512);
-  for (let y = 0; y < 512; y += 3) {
-    x.strokeStyle = `rgba(90, 75, 40, ${0.05 + Math.random() * 0.06})`;
-    x.beginPath(); x.moveTo(0, y + Math.random()); x.lineTo(512, y); x.stroke();
-  }
-  x.strokeStyle = "#2e2418";
-  x.lineWidth = 7;
-  x.strokeRect(2, 2, 508, 508);
-  x.beginPath(); x.moveTo(256, 0); x.lineTo(256, 512); x.stroke();
-  x.beginPath(); x.moveTo(0, 256); x.lineTo(512, 256); x.stroke();
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = MAKS_ANIZO;
-  return t;
-}
-
-function shojiDokusu() {
-  // İçten aydınlanan pirinç kâğıdı panel: sıcak beyaz + ahşap kafes
-  const c = document.createElement("canvas");
-  c.width = 256; c.height = 512;
-  const x = c.getContext("2d");
-  const g = x.createLinearGradient(0, 0, 0, 512);
-  g.addColorStop(0, "#fff6e2");
-  g.addColorStop(1, "#f5e5c8");
-  x.fillStyle = g;
-  x.fillRect(0, 0, 256, 512);
-  x.strokeStyle = "#4a3826";
-  x.lineWidth = 10;
-  x.strokeRect(5, 5, 246, 502);
-  x.lineWidth = 4;
-  for (let i = 1; i < 4; i++) { x.beginPath(); x.moveTo(i * 64, 0); x.lineTo(i * 64, 512); x.stroke(); }
-  for (let j = 1; j < 8; j++) { x.beginPath(); x.moveTo(0, j * 64); x.lineTo(256, j * 64); x.stroke(); }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function acikAhsapDokusu() {
-  // Çay odası duvarları: çerçevelerdeki koyu cevizden açık, hinoki tonunda
-  const c = document.createElement("canvas");
-  c.width = 512; c.height = 512;
-  const x = c.getContext("2d");
-  x.fillStyle = "#9c7a4f";
-  x.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 70; i++) {
-    const y0 = Math.random() * 512;
-    x.strokeStyle = Math.random() > 0.5 ? "rgba(64, 45, 24, 0.18)" : "rgba(158, 128, 86, 0.22)";
-    x.lineWidth = Math.random() * 2.5 + 0.5;
-    x.beginPath();
-    x.moveTo(0, y0);
-    for (let px = 0; px <= 512; px += 32) {
-      x.lineTo(px, y0 + Math.sin(px * 0.01 + i * 2) * 5 + (Math.random() - 0.5) * 2);
-    }
-    x.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  return t;
-}
-
-function geceDokusu() {
-  // Pencereden görünen gece: yıldızlar, dolunay ve çiçek açmış sakura dalı
-  const c = document.createElement("canvas");
-  c.width = 512; c.height = 384;
-  const x = c.getContext("2d");
-  const g = x.createLinearGradient(0, 0, 0, 384);
-  g.addColorStop(0, "#0a1030");
-  g.addColorStop(1, "#1c2650");
-  x.fillStyle = g;
-  x.fillRect(0, 0, 512, 384);
-  for (let i = 0; i < 90; i++) {
-    x.fillStyle = `rgba(255,255,240,${0.25 + Math.random() * 0.7})`;
-    x.fillRect(Math.random() * 512, Math.random() * 300, 1.6, 1.6);
-  }
-  const ay = x.createRadialGradient(400, 90, 5, 400, 90, 46);
-  ay.addColorStop(0, "#fffbe8");
-  ay.addColorStop(0.8, "#f4ecc8");
-  ay.addColorStop(1, "rgba(244,236,200,0)");
-  x.fillStyle = ay;
-  x.beginPath(); x.arc(400, 90, 46, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = "#05070f";
-  x.lineWidth = 8;
-  x.beginPath(); x.moveTo(0, 340); x.quadraticCurveTo(150, 240, 320, 258); x.stroke();
-  x.lineWidth = 4;
-  x.beginPath(); x.moveTo(170, 272); x.quadraticCurveTo(240, 200, 305, 182); x.stroke();
-  for (let i = 0; i < 46; i++) {
-    const t2 = Math.random();
-    const bx = 175 + t2 * 140 + (Math.random() - 0.5) * 34;
-    const by = 268 - t2 * 82 + (Math.random() - 0.5) * 28;
-    x.fillStyle = `rgba(${240 + Math.random() * 15}, ${168 + Math.random() * 42}, ${192 + Math.random() * 34}, 0.92)`;
-    x.beginPath(); x.arc(bx, by, 2.5 + Math.random() * 2.6, 0, Math.PI * 2); x.fill();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
 function isikGoluDokusu() {
   // Çok eser olduğunda gerçek spot yerine kullanılan duvar ışık yıkaması
   const c = document.createElement("canvas");
@@ -438,9 +332,6 @@ const golgeDoku = golgeDokusu();
 const cevizDoku = cevizDokusu();
 const isikGolu = isikGoluDokusu();
 let HOL = { W: 8, L: 40, H: 5.2 };
-// Çay odası (lobinin arkasında, sürme kapıyla). "basi" evKur'da belirlenir;
-// Infinity kaldıkça hareket sınırları ev yokmuş gibi davranır.
-let EV = { W: 5.6, L: 7, H: 3.0, basi: Infinity };
 let sakura = null; // havada süzülen kiraz çiçeği yaprakları
 
 function holKur(fotoSayisi, baslik, aciklama) {
@@ -633,18 +524,10 @@ function holKur(fotoSayisi, baslik, aciklama) {
     scene.add(lobiDuvar);
   }
   
-  // Lobinin arka duvarı: ortasında çay odasına açılan sürme kapı boşluğu
-  const arkaYanW = (W - 1.7) / 2;
-  for (const taraf of [-1, 1]) {
-    const parca = new THREE.Mesh(new THREE.PlaneGeometry(arkaYanW, H), duvarMat);
-    parca.position.set(taraf * (0.85 + arkaYanW / 2), H / 2, L / 2 + lobiL);
-    parca.rotation.y = Math.PI;
-    scene.add(parca);
-  }
-  const arkaUst = new THREE.Mesh(new THREE.PlaneGeometry(1.7, H - 2.2), duvarMat);
-  arkaUst.position.set(0, 2.2 + (H - 2.2) / 2, L / 2 + lobiL);
-  arkaUst.rotation.y = Math.PI;
-  scene.add(arkaUst);
+  const lobiArkaDuvar = new THREE.Mesh(new THREE.PlaneGeometry(W, H), duvarMat);
+  lobiArkaDuvar.position.set(0, H / 2, L / 2 + lobiL);
+  lobiArkaDuvar.rotation.y = Math.PI;
+  scene.add(lobiArkaDuvar);
 
   const lobiIsik = new THREE.PointLight(0xfff3e0, 25, 15);
   lobiIsik.position.set(0, H - 1, lobiZ);
@@ -956,239 +839,6 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
   });
 }
 
-// ---------- Çay Odası (lobinin arkasında, sürme shoji kapılı) ----------
-let surmePanel = null; // yaklaşınca yana kayan shoji kapı
-
-function evKur(fotograflar) {
-  const { W: EW, L: EL, H: EH } = EV;
-  const basi = HOL.L / 2 + 8; // lobinin arka duvarı
-  EV.basi = basi;
-  const mz = basi + EL / 2;   // odanın merkezi
-  const taban = 0.15;         // genkan basamağı: tatami hafif yüksekte
-
-  const duvarAhsapMat = new THREE.MeshStandardMaterial({ map: acikAhsapDokusu(), roughness: 0.75 });
-  const koyuAhsapMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.5 });
-
-  // --- Zemin: tatami + basamak ---
-  const tatami = tatamiDokusu();
-  tatami.repeat.set(EW / 1.8, EL / 1.8);
-  const zeminEv = new THREE.Mesh(
-    new THREE.PlaneGeometry(EW, EL),
-    new THREE.MeshStandardMaterial({ map: tatami, roughness: 0.9 })
-  );
-  zeminEv.rotation.x = -Math.PI / 2;
-  zeminEv.position.set(0, taban, mz);
-  scene.add(zeminEv);
-
-  const basamak = new THREE.Mesh(new THREE.BoxGeometry(1.7, taban, 0.5), koyuAhsapMat);
-  basamak.position.set(0, taban / 2, basi + 0.25);
-  scene.add(basamak);
-
-  // --- Tavan + kirişler (alçak tavan: ev sıcaklığı) ---
-  const tavanEv = new THREE.Mesh(new THREE.PlaneGeometry(EW, EL), duvarAhsapMat);
-  tavanEv.rotation.x = Math.PI / 2;
-  tavanEv.position.set(0, EH, mz);
-  scene.add(tavanEv);
-  for (let k = 1; k <= 3; k++) {
-    const kiris = new THREE.Mesh(new THREE.BoxGeometry(EW, 0.12, 0.12), koyuAhsapMat);
-    kiris.position.set(0, EH - 0.06, basi + (EL * k) / 4);
-    scene.add(kiris);
-  }
-
-  // --- Duvarlar ---
-  for (const taraf of [-1, 1]) {
-    const duvar = new THREE.Mesh(new THREE.PlaneGeometry(EL, EH), duvarAhsapMat);
-    duvar.position.set(taraf * EW / 2, EH / 2, mz);
-    duvar.rotation.y = -taraf * Math.PI / 2;
-    scene.add(duvar);
-  }
-  const arkaEv = new THREE.Mesh(new THREE.PlaneGeometry(EW, EH), duvarAhsapMat);
-  arkaEv.position.set(0, EH / 2, basi + EL);
-  arkaEv.rotation.y = Math.PI;
-  scene.add(arkaEv);
-  // Ön duvarın ev içi yüzü (kapı boşluklu)
-  const onYanW = (EW - 1.7) / 2;
-  for (const taraf of [-1, 1]) {
-    const panel = new THREE.Mesh(new THREE.PlaneGeometry(onYanW, EH), duvarAhsapMat);
-    panel.position.set(taraf * (0.85 + onYanW / 2), EH / 2, basi + 0.01);
-    scene.add(panel);
-  }
-  const onUst = new THREE.Mesh(new THREE.PlaneGeometry(1.7, EH - 2.2), duvarAhsapMat);
-  onUst.position.set(0, 2.2 + (EH - 2.2) / 2, basi + 0.01);
-  scene.add(onUst);
-
-  // --- İçten aydınlanan shoji panelleri (yan duvarlarda) ---
-  const shojiMat = new THREE.MeshBasicMaterial({ map: shojiDokusu() });
-  for (const taraf of [-1, 1]) {
-    for (const dz of [-1.4, 1.4]) {
-      const shoji = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.0), shojiMat);
-      shoji.position.set(taraf * (EW / 2 - 0.02), taban + 1.15, mz + dz);
-      shoji.rotation.y = -taraf * Math.PI / 2;
-      scene.add(shoji);
-    }
-  }
-
-  // --- Gece penceresi (arka duvar): dolunay ve sakura dalı ---
-  const pencere = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.9, 1.15),
-    new THREE.MeshBasicMaterial({ map: geceDokusu() })
-  );
-  pencere.position.set(-0.9, taban + 1.45, basi + EL - 0.02);
-  pencere.rotation.y = Math.PI;
-  scene.add(pencere);
-  for (let i = -1; i <= 1; i++) {
-    const dik = new THREE.Mesh(new THREE.BoxGeometry(0.045, 1.15, 0.045), koyuAhsapMat);
-    dik.position.set(-0.9 + i * 0.63, taban + 1.45, basi + EL - 0.04);
-    scene.add(dik);
-  }
-  const yatayCubuk = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.055, 0.045), koyuAhsapMat);
-  yatayCubuk.position.set(-0.9, taban + 1.45, basi + EL - 0.04);
-  scene.add(yatayCubuk);
-
-  // --- Tokonoma: asılı rulo (kakemono) içinde ilk fotoğraf ---
-  const rulo = new THREE.Group();
-  const kagit = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.66, 1.65),
-    new THREE.MeshStandardMaterial({ color: 0xf2e9d4, roughness: 0.95 })
-  );
-  rulo.add(kagit);
-  for (const uy of [0.86, -0.86]) {
-    const cubuk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.78, 10), koyuAhsapMat);
-    cubuk.rotation.z = Math.PI / 2;
-    cubuk.position.y = uy;
-    rulo.add(cubuk);
-  }
-  rulo.position.set(1.6, taban + 1.5, basi + EL - 0.06);
-  rulo.rotation.y = Math.PI;
-  scene.add(rulo);
-  const ilk = fotograflar[0];
-  if (ilk) {
-    dokuYukleyici.load(ilk.src, (doku) => {
-      doku.colorSpace = THREE.SRGBColorSpace;
-      const oran = doku.image.width / doku.image.height;
-      const fw = 0.56;
-      const f = new THREE.Mesh(
-        new THREE.PlaneGeometry(fw, Math.min(fw / oran, 1.3)),
-        (() => { const m = new THREE.MeshBasicMaterial({ map: doku }); m.toneMapped = false; return m; })()
-      );
-      f.position.z = 0.006;
-      f.userData = { index: 0, foto: ilk };
-      rulo.add(f);
-      eserler.push(f);
-    });
-  }
-
-  // --- Alçak çay masası, minderler, demlik, fincanlar ---
-  const masa = new THREE.Group();
-  const tabla = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.055, 0.75), koyuAhsapMat);
-  tabla.position.y = 0.33;
-  masa.add(tabla);
-  for (const mx of [-0.48, 0.48]) {
-    for (const mk of [-0.28, 0.28]) {
-      const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.31, 0.06), koyuAhsapMat);
-      bacak.position.set(mx, 0.155, mk);
-      masa.add(bacak);
-    }
-  }
-  const demlik = new THREE.Mesh(
-    new THREE.SphereGeometry(0.11, 16, 12),
-    new THREE.MeshStandardMaterial({ color: 0x2f4a3a, roughness: 0.35, metalness: 0.3 })
-  );
-  demlik.scale.y = 0.72;
-  demlik.position.set(0.2, 0.43, 0);
-  masa.add(demlik);
-  const topuz = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), koyuAhsapMat);
-  topuz.position.set(0.2, 0.52, 0);
-  masa.add(topuz);
-  for (const fx of [-0.2, -0.02]) {
-    const fincan = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.032, 0.055, 12),
-      new THREE.MeshStandardMaterial({ color: 0xd8cfc0, roughness: 0.6 })
-    );
-    fincan.position.set(fx, 0.386, 0.12);
-    masa.add(fincan);
-  }
-  for (const taraf of [-1, 1]) {
-    const minder = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.09, 0.6),
-      new THREE.MeshStandardMaterial({ color: 0x31405e, roughness: 0.95 })
-    );
-    minder.position.set(0, 0.045, taraf * 0.78);
-    masa.add(minder);
-  }
-  masa.position.set(-0.5, taban, mz + 0.3);
-  scene.add(masa);
-
-  // --- Kâğıt fener + sıcak oda ışığı ---
-  const fener = new THREE.Mesh(
-    new THREE.SphereGeometry(0.19, 14, 10),
-    new THREE.MeshBasicMaterial({ color: 0xffdfae })
-  );
-  fener.scale.y = 1.25;
-  fener.position.set(1.6, taban + 0.55, basi + EL - 0.85);
-  scene.add(fener);
-  const fenerIsik = new THREE.PointLight(0xffc37a, 5, 4, 1.8);
-  fenerIsik.position.copy(fener.position);
-  scene.add(fenerIsik);
-  const evIsik = new THREE.PointLight(0xffd9a6, 14, 9, 1.8);
-  evIsik.position.set(0, EH - 0.5, mz);
-  scene.add(evIsik);
-
-  // --- Duvarlarda evin çerçeveli anıları (son 4 fotoğraf) ---
-  const secilen = fotograflar.slice(-4);
-  secilen.forEach((foto, i) => {
-    dokuYukleyici.load(foto.src, (doku) => {
-      doku.colorSpace = THREE.SRGBColorSpace;
-      doku.anisotropy = MAKS_ANIZO;
-      const oran = doku.image.width / doku.image.height;
-      const fw2 = 0.62, fh2 = fw2 / oran;
-      const g2 = new THREE.Group();
-      const cer = new THREE.Mesh(new THREE.BoxGeometry(fw2 + 0.07, fh2 + 0.07, 0.035), koyuAhsapMat);
-      g2.add(cer);
-      const fmat2 = new THREE.MeshBasicMaterial({ map: doku });
-      fmat2.toneMapped = false;
-      const fm = new THREE.Mesh(new THREE.PlaneGeometry(fw2, fh2), fmat2);
-      fm.position.z = 0.02;
-      fm.userData = { index: fotograflar.length - secilen.length + i, foto };
-      g2.add(fm);
-      eserler.push(fm);
-      const taraf = i < 2 ? -1 : 1;
-      const dz2 = i % 2 === 0 ? -0.3 : 2.6; // shoji panelleriyle çakışmaz
-      g2.position.set(taraf * (EW / 2 - 0.05), taban + 1.55, mz + dz2);
-      g2.rotation.y = -taraf * Math.PI / 2;
-      scene.add(g2);
-    });
-  });
-
-  // --- Sürme shoji kapı + ray + lobi tarafında tabela ---
-  surmePanel = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.8, 2.18),
-    new THREE.MeshBasicMaterial({ map: shojiDokusu(), side: THREE.DoubleSide })
-  );
-  surmePanel.position.set(0, 1.1, basi - 0.07);
-  scene.add(surmePanel);
-  const ray = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.09, 0.18), koyuAhsapMat);
-  ray.position.set(0.9, 2.27, basi - 0.06);
-  scene.add(ray);
-
-  const yazi = document.createElement("canvas");
-  yazi.width = 512; yazi.height = 128;
-  const yx = yazi.getContext("2d");
-  yx.textAlign = "center";
-  yx.fillStyle = "#c9a227";
-  yx.font = "600 58px Georgia, serif";
-  yx.fillText("· ÇAY ODASI ·", 256, 82);
-  const yaziDoku = new THREE.CanvasTexture(yazi);
-  yaziDoku.colorSpace = THREE.SRGBColorSpace;
-  const tabelaEv = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.5, 0.375),
-    new THREE.MeshBasicMaterial({ map: yaziDoku, transparent: true })
-  );
-  tabelaEv.position.set(0, 2.75, basi - 0.03);
-  tabelaEv.rotation.y = Math.PI;
-  scene.add(tabelaEv);
-}
-
 // ---------- Gezinti durumu ----------
 // Fare kilidi (pointer lock) her ortamda çalışmaz (ör. gömülü paneller).
 // Alınamazsa "sürükle-bak" moduna düşeriz.
@@ -1201,8 +851,6 @@ let kilitCalisti = false;
 let kapiAcik = false;
 let kapiAcilmaOrani = 0;
 let kanatNesneleri = [];
-let kapi2Acik = false;      // çay odasının sürme kapısı
-let kapi2AcilmaOrani = 0;
 const fareNDC = new THREE.Vector2(0, 0);
 
 // ---------- Ses ----------
@@ -1340,9 +988,7 @@ function hareketGuncelle(dt) {
     controls.moveForward(-hiz.z * dt);
   }
 
-  // Bölgeye göre yan duvar sınırı: çay odası holden dar
-  const xSinir = p.z > EV.basi ? EV.W / 2 - 0.45 : HOL.W / 2 - 0.7;
-  p.x = THREE.MathUtils.clamp(p.x, -xSinir, xSinir);
+  p.x = THREE.MathUtils.clamp(p.x, -(HOL.W / 2 - 0.7), HOL.W / 2 - 0.7);
 
   // Lobi-galeri ayırıcı duvarı: kapı boşluğu (|x|<1.05) dışında her zaman katı;
   // boşluktan geçiş yalnızca kapı yeterince açıkken mümkün.
@@ -1356,26 +1002,11 @@ function hareketGuncelle(dt) {
   // Kapı aralığından geçerken kasaya sürtme
   if (Math.abs(p.z - esik) < 0.35) p.x = THREE.MathUtils.clamp(p.x, -1.0, 1.0);
 
-  // Çay odasının sürme kapısı (lobi arka duvarı): boşluk dışında katı,
-  // boşluktan geçiş yalnızca panel yeterince kaymışken mümkün
-  if (EV.basi !== Infinity) {
-    const esik2 = EV.basi;
-    const gecebilir2 = Math.abs(p.x) < 0.8 && kapi2AcilmaOrani > 0.55;
-    if (!gecebilir2) {
-      if (oncekiZ <= esik2 && p.z > esik2 - 0.35) { p.z = esik2 - 0.35; hiz.z = Math.min(hiz.z, 0); }
-      else if (oncekiZ > esik2 && p.z < esik2 + 0.35) { p.z = esik2 + 0.35; hiz.z = Math.max(hiz.z, 0); }
-    }
-    if (Math.abs(p.z - esik2) < 0.35) p.x = THREE.MathUtils.clamp(p.x, -0.7, 0.7);
-  }
-
-  const zSon = EV.basi === Infinity ? HOL.L / 2 + 6.5 : EV.basi + EV.L - 0.55;
-  p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), zSon);
+  p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), HOL.L / 2 + 6.5);
 
   const tempo = Math.hypot(hiz.x, hiz.z);
   adimFazi += dt * tempo * 1.9;
-  // Çay odasının tatami zemini basamakla yükselir; geçişte yumuşak rampa
-  const zeminYuksekligi = 0.15 * THREE.MathUtils.smoothstep(p.z, EV.basi - 0.4, EV.basi + 0.5);
-  p.y = 1.7 + zeminYuksekligi + Math.sin(adimFazi) * Math.min(tempo / 40, 1) * 0.045;
+  p.y = 1.7 + Math.sin(adimFazi) * Math.min(tempo / 40, 1) * 0.045;
 }
 
 const _yaprakMatrisi = new THREE.Matrix4();
@@ -1586,7 +1217,6 @@ if (joyZone) {
   joyZone.addEventListener("touchstart", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (turModu) turuDurdur(); // joystick'e dokunmak otomatik turu keser
     const t = e.changedTouches[0];
     joyId = t.identifier;
     joyAktif = true;
@@ -1645,6 +1275,20 @@ function turDonusGuncelle(dt) {
 
 // Kullanıcı fareyle bakınmaya başlarsa otomatik dönüşü ona bırak
 controls.addEventListener("change", () => { turDonus = null; });
+
+// Tur sırasında joystick yürüyüşü değil BAKIŞI yönetir: kullanıcının eli
+// bakış değiştirmek için zaten joysticke gidiyor — tur kesilmez, kamera döner.
+// Tur kapalıyken joystick her zamanki gibi yürütür (hareketGuncelle).
+function joyBakisGuncelle(dt) {
+  if (!turModu || !gezintiAktif || !joyAktif) return;
+  if (joyX === 0 && joyY === 0) return;
+  turDonus = null; // kamerayı kullanıcı devraldı
+  bakis.setFromQuaternion(camera.quaternion);
+  bakis.y -= joyX * dt * 1.8;
+  bakis.x -= joyY * dt * 1.2;
+  bakis.x = THREE.MathUtils.clamp(bakis.x, -1.4, 1.4);
+  camera.quaternion.setFromEuler(bakis);
+}
 
 const btnOtotur = qs("#btn-ototur");
 
@@ -1844,9 +1488,6 @@ async function baslat() {
     tabloOlustur(foto, i, taraf, z, gercekSpot);
   });
 
-  // Lobinin arkasındaki çay odası
-  evKur(veri.fotograflar);
-
   // Lobide doğ, yüzün kapıya (L/2'ye) dönük
   const pObj = controls.getObject();
   pObj.position.set(0, 1.7, L / 2 + 4.5);
@@ -1884,29 +1525,16 @@ async function baslat() {
       k.pivot.rotation.y = -k.sx * aci; // İçeriye (negatif yöne) açılsın
     });
 
-    // Çay odasının sürme kapısı: yaklaşınca yana kayar
-    if (surmePanel) {
-      const mesafe2 = Math.abs(pObj.position.z - EV.basi);
-      const kapi2Yeni = gezintiAktif && mesafe2 < 3.0;
-      if (kapi2Yeni !== kapi2Acik) {
-        kapi2Acik = kapi2Yeni;
-        kapiSesi(kapi2Acik);
-      }
-      if (kapi2Acik) kapi2AcilmaOrani = Math.min(1, kapi2AcilmaOrani + dt * 1.6);
-      else kapi2AcilmaOrani = Math.max(0, kapi2AcilmaOrani - dt * 1.1);
-      const ease2 = 1 - Math.pow(1 - kapi2AcilmaOrani, 3);
-      surmePanel.position.x = ease2 * 1.85; // duvarın arkasına kayar
-    }
-
     hareketGuncelle(dt);
     turDonusGuncelle(dt);
+    joyBakisGuncelle(dt);
     hedefGuncelle();
     sakuraGuncelle(dt);
     renderer.render(scene, camera);
   });
 
   // Tanılama (konsoldan erişim için)
-  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL, EV, sakura, zamanOku: () => zaman };
+  window.__galeri = { scene, renderer, camera, controls, eserler, veri, HOL, sakura, zamanOku: () => zaman };
 }
 
 baslat();
