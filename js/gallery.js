@@ -13,6 +13,27 @@ const NOT_ANAHTARI = `galeriNotlar:${GEZI}`;
 // Yayın modu: notlar salt okunur. Sahibi ?duzenle=1 ile düzenlemeyi açabilir.
 const DUZENLE = params.get("duzenle") === "1";
 
+// ---------- Tema sistemi ----------
+// Motor tek: temel salon deneyimi bütün gezilerde aynı kalır. Mekân
+// hissini veren dokunuşlar temadan gelir. Yeni bir gezi salonu açmak =
+// data/<gezi>.json yazmak + (istenirse) buraya bir tema kaydı eklemek.
+// Manifest "tema" alanıyla kayıt seçebilir; yoksa gezi adı denenir.
+const TEMALAR = {
+  varsayilan: {
+    parcaciklar: null,   // havada süzülen parçacık yok
+    isiklikDeseni: null, // düz süt beyazı tavan ışıklığı
+    plaketMuhru: false,
+    slogan: "— SONSUZLUĞA ASILI ANILAR —",
+  },
+  japonya: {
+    parcaciklar: "sakura", // kiraz çiçeği yağmuru + yerde birikme
+    isiklikDeseni: "shoji", // ışıklıkta pirinç kâğıdı kafes silueti
+    plaketMuhru: true,      // ukiyo-e baskılarındaki kırmızı sanatçı mührü
+    slogan: "— SONSUZLUĞA ASILI ANILAR —",
+  },
+};
+let TEMA = TEMALAR.varsayilan;
+
 function yerelNotlar() {
   try { return JSON.parse(localStorage.getItem(NOT_ANAHTARI)) || {}; }
   catch { return {}; }
@@ -212,6 +233,29 @@ function isikGoluDokusu() {
   return new THREE.CanvasTexture(c);
 }
 
+function shojiIsiklikDokusu() {
+  // Işıklığın camının arkasında shoji kafesi varmış hissi: sıcak beyaz
+  // zemin üstünde yumuşak ahşap çıta silueti
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const x = c.getContext("2d");
+  x.fillStyle = "#fff7e8";
+  x.fillRect(0, 0, 256, 256);
+  x.strokeStyle = "rgba(146, 124, 96, 0.5)";
+  x.lineWidth = 7;
+  for (const k of [0, 128, 256]) {
+    x.beginPath(); x.moveTo(k, 0); x.lineTo(k, 256); x.stroke();
+  }
+  for (let y = 0; y <= 256; y += 64) {
+    x.beginPath(); x.moveTo(0, y); x.lineTo(256, y); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
 function metniSar(ctx, text, maxW) {
   const kelimeler = (text || "").split(/\s+/);
   const satirlar = [];
@@ -260,6 +304,15 @@ function plaketDokusuCiz(baslik, not) {
     y += 32;
   }
 
+  if (TEMA.plaketMuhru) {
+    // Ukiyo-e baskılarındaki kırmızı sanatçı mührü (inkan)
+    x.fillStyle = "#b0392e";
+    x.beginPath(); x.arc(458, 262, 22, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "rgba(245, 238, 226, 0.9)";
+    x.lineWidth = 2.5;
+    x.strokeRect(447, 251, 22, 22);
+  }
+
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
@@ -282,7 +335,7 @@ function baslikDuvariDokusu(baslik, aciklama, adet) {
     x.textAlign = "center";
     x.fillStyle = "#c9a227";
     x.font = "italic 52px Georgia, serif";
-    x.fillText("— SONSUZLUĞA ASILI ANILAR —", 1024, 300);
+    x.fillText(TEMA.slogan, 1024, 300);
     x.font = "600 190px Georgia, serif";
     x.fillStyle = "#f2ede4";
     x.fillText(baslik, 1024, 520);
@@ -400,11 +453,15 @@ function holKur(fotoSayisi, baslik, aciklama) {
   tavan.position.y = H;
   scene.add(tavan);
 
-  // Tavan ışıklığı (laylight)
-  const isiklik = new THREE.Mesh(
-    new THREE.PlaneGeometry(W * 0.42, L - 8),
-    new THREE.MeshBasicMaterial({ color: 0xfff7e8 })
-  );
+  // Tavan ışıklığı (laylight) — temaya göre desen alır (Japonya: shoji)
+  const isiklikMat = new THREE.MeshBasicMaterial({ color: 0xfff7e8 });
+  if (TEMA.isiklikDeseni === "shoji") {
+    const sd = shojiIsiklikDokusu();
+    sd.repeat.set(3, Math.max(8, Math.round((L - 8) / 2.2)));
+    isiklikMat.map = sd;
+    isiklikMat.color.set(0xffffff); // sıcaklık dokunun kendisinden gelsin
+  }
+  const isiklik = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.42, L - 8), isiklikMat);
   isiklik.rotation.x = Math.PI / 2;
   isiklik.position.y = H - 0.02;
   scene.add(isiklik);
@@ -632,7 +689,8 @@ function holKur(fotoSayisi, baslik, aciklama) {
   // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
   // kesintisiz yaprak halısına kalıyor.
 
-  // --- Havada süzülen kiraz çiçeği yaprakları ---
+  // --- Havada süzülen parçacıklar (temaya bağlı; Japonya: kiraz çiçeği) ---
+  if (TEMA.parcaciklar === "sakura") {
   const yaprakSayisi = Math.min(1200, Math.floor(L * 10));
   const yaprakGeo = new THREE.PlaneGeometry(0.085, 0.085);
   const yaprakMat = new THREE.MeshBasicMaterial({
@@ -684,6 +742,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   scene.add(yerdeYapraklar);
 
   sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0 };
+  }
 
   // --- Genel ışık ve atmosfer ---
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
@@ -1487,6 +1546,9 @@ async function baslat() {
   qs("#giris-aciklama").textContent =
     `${veri.aciklama || ""}  ·  ${veri.fotograflar.length} eser`;
   document.title = `${veri.baslik} — Sanal Galeri`;
+
+  // Tema seçimi: manifest "tema" alanı > gezi adıyla eşleşen kayıt > varsayılan
+  TEMA = TEMALAR[veri.tema] || TEMALAR[GEZI] || TEMALAR.varsayilan;
 
   muzikKur(veri);
 
