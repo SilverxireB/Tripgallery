@@ -54,6 +54,12 @@ body {
   to { transform: translate(128px, 128px); }
 }
 
+/* Mobilde film taneciği kapalı: mix-blend-mode bazı Android tarayıcılarda
+   parlama/leke artefaktı üretebiliyor, ayrıca GPU maliyeti gereksiz */
+@media (pointer: coarse) {
+  #gren { display: none; }
+}
+
 .hidden { display: none !important; }
 
 .dim { color: var(--text-dim); }

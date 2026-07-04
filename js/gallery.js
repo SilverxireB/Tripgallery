@@ -943,6 +943,93 @@ function sesBaslat() {
   try { sesCtx = new AC(); } catch { sesCtx = null; }
 }
 
+// ---------- Videowall: holün sonundaki tam boy sinevizyon ----------
+// Karşı duvar, fotoğrafların yumuşak çapraz geçişle döndüğü dev bir
+// ekrandır. Başlık duvarı altta kalır: ilk kare yüklenene dek görünür.
+// Bellek dostu: aynı anda en fazla iki doku tutulur, eskisi dispose edilir.
+const VW_GOSTERIM = 4.2; // bir karenin ekranda kalma süresi (sn)
+const VW_GECIS = 1.2;    // çapraz geçiş süresi (sn)
+let videowall = null;
+
+function videowallDokuHazirla(doku) {
+  doku.colorSpace = THREE.SRGBColorSpace;
+  doku.anisotropy = MAKS_ANIZO;
+  // Duvarı doldur (cover): oranı bozmadan ortadan kırp
+  const duvarOran = HOL.W / HOL.H;
+  const resimOran = doku.image.width / doku.image.height;
+  if (resimOran > duvarOran) {
+    const r = duvarOran / resimOran;
+    doku.repeat.set(r, 1);
+    doku.offset.set((1 - r) / 2, 0);
+  } else {
+    const r = resimOran / duvarOran;
+    doku.repeat.set(1, r);
+    doku.offset.set(0, (1 - r) / 2);
+  }
+  return doku;
+}
+
+function videowallKur(fotograflar) {
+  if (!fotograflar.length) return;
+  const panelYap = (z) => {
+    const m = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+    m.toneMapped = false; // fotoğraf renkleri solmasın
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(HOL.W, HOL.H), m);
+    mesh.position.set(0, HOL.H / 2, z);
+    scene.add(mesh);
+    return mesh;
+  };
+  const alt = panelYap(-HOL.L / 2 + 0.035);
+  const ust = panelYap(-HOL.L / 2 + 0.037);
+  videowall = { alt, ust, sira: 0, bekleme: 0, gecis: -1, yukleniyor: false, fotograflar };
+  dokuYukleyici.load(fotograflar[0].src, (doku) => {
+    alt.material.map = videowallDokuHazirla(doku);
+    alt.material.opacity = 1;
+    alt.material.needsUpdate = true;
+  });
+}
+
+function videowallGuncelle(dt) {
+  if (!videowall) return;
+  const v = videowall;
+  if (v.gecis >= 0) {
+    v.gecis += dt / VW_GECIS;
+    const k = Math.min(v.gecis, 1);
+    v.ust.material.opacity = k * k * (3 - 2 * k); // smoothstep
+    if (k >= 1) {
+      // Üstteki kare kalıcı görüntü oldu: alta indir, üstü boşalt
+      const eski = v.alt.material.map;
+      v.alt.material.map = v.ust.material.map;
+      v.alt.material.opacity = 1;
+      v.alt.material.needsUpdate = true;
+      v.ust.material.opacity = 0;
+      v.ust.material.map = null;
+      v.ust.material.needsUpdate = true;
+      if (eski) eski.dispose();
+      v.gecis = -1;
+      v.bekleme = 0;
+    }
+  } else {
+    v.bekleme += dt;
+    if (v.bekleme >= VW_GOSTERIM && !v.yukleniyor) {
+      v.yukleniyor = true;
+      v.sira = (v.sira + 1) % v.fotograflar.length;
+      dokuYukleyici.load(
+        v.fotograflar[v.sira].src,
+        (doku) => {
+          v.yukleniyor = false;
+          v.ust.material.map = videowallDokuHazirla(doku);
+          v.ust.material.opacity = 0;
+          v.ust.material.needsUpdate = true;
+          v.gecis = 0;
+        },
+        undefined,
+        () => { v.yukleniyor = false; v.bekleme = 0; } // yüklenemedi: sıradakine geç
+      );
+    }
+  }
+}
+
 // ---------- Müzik (assets/<gezi>/muzik.mp3 veya manifestteki "muzik" alanı) ----------
 let muzik = null;
 let muzikAcik = true;
@@ -1566,6 +1653,9 @@ async function baslat() {
     tabloOlustur(foto, i, taraf, z, gercekSpot);
   });
 
+  // Holün sonundaki duvar: tam boy sinevizyon
+  videowallKur(veri.fotograflar);
+
   // Lobide doğ, yüzün kapıya (L/2'ye) dönük
   const pObj = controls.getObject();
   pObj.position.set(0, 1.7, L / 2 + 4.5);
@@ -1614,6 +1704,7 @@ async function baslat() {
     joyBakisGuncelle(dt);
     hedefGuncelle();
     sakuraGuncelle(dt);
+    videowallGuncelle(dt);
     renderer.render(scene, camera);
   });
 
