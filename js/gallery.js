@@ -24,12 +24,15 @@ const TEMALAR = {
     isiklikDeseni: null, // düz süt beyazı tavan ışıklığı
     plaketMuhru: false,
     slogan: "— SONSUZLUĞA ASILI ANILAR —",
+    dekor: null,         // kenar-köşe dekorasyon yok
   },
   japonya: {
     parcaciklar: "sakura", // kiraz çiçeği yağmuru + yerde birikme
     isiklikDeseni: "shoji", // ışıklıkta pirinç kâğıdı kafes silueti
     plaketMuhru: true,      // ukiyo-e baskılarındaki kırmızı sanatçı mührü
     slogan: "— SONSUZLUĞA ASILI ANILAR —",
+    // Girişte vermilion torii, duvar diplerinde taş fener, tavanda chochin
+    dekor: { girisTorii: true, tasFener: true, chochin: true },
   },
 };
 let TEMA = TEMALAR.varsayilan;
@@ -253,6 +256,28 @@ function shojiIsiklikDokusu() {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
+  return t;
+}
+
+function chochinDokusu() {
+  // Asılı kırmızı kağıt fener: yatay kağıt kaburgaları + ortada kanji (祭 · matsuri)
+  const c = document.createElement("canvas");
+  c.width = 128; c.height = 256;
+  const x = c.getContext("2d");
+  x.fillStyle = "#cf2b28";
+  x.fillRect(0, 0, 128, 256);
+  x.strokeStyle = "rgba(120, 12, 10, 0.5)";
+  x.lineWidth = 2;
+  for (let y = 10; y < 256; y += 15) {
+    x.beginPath(); x.moveTo(0, y); x.lineTo(128, y); x.stroke();
+  }
+  x.fillStyle = "#f3ead7";
+  x.font = "bold 90px 'Yu Mincho', serif";
+  x.textAlign = "center";
+  x.textBaseline = "middle";
+  x.fillText("祭", 64, 132);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
@@ -744,12 +769,103 @@ function holKur(fotoSayisi, baslik, aciklama) {
   sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0 };
   }
 
+  // --- Temaya özel kenar-köşe dekorasyonları ---
+  dekorKur({ W, L, H });
+
   // --- Genel ışık ve atmosfer ---
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
   scene.add(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
   scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
 
   return { W, L, H, tarafBasina, kanatlar };
+}
+
+// Salona mekân kimliğini veren dekorasyonlar. Tümü prosedürel (dosya yok)
+// ve TEMA.dekor bayraklarıyla açılır — böylece "thailand" teması aynı
+// kancalara bambaşka öğeler asabilir, deneyim aynı kalır.
+function dekorKur({ W, L, H }) {
+  const d = TEMA.dekor;
+  if (!d) return;
+
+  // --- Girişte vermilion torii kapısı (Japonya'nın en güçlü sembolü) ---
+  if (d.girisTorii) {
+    const kirmizi = new THREE.MeshStandardMaterial({ color: 0xbf2b25, roughness: 0.55, metalness: 0.05 });
+    const siyah = new THREE.MeshStandardMaterial({ color: 0x18140f, roughness: 0.5 });
+    const torii = new THREE.Group();
+    for (const sx of [-1, 1]) {
+      const hashira = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 4.0, 16), kirmizi);
+      hashira.position.set(sx * 3.35, 2.0, 0);
+      torii.add(hashira);
+    }
+    // Kasagi (üstteki ana kiriş) + hafif yukarı kalkık uçlar
+    const kasagi = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.26, 0.42), kirmizi);
+    kasagi.position.set(0, 4.06, 0);
+    torii.add(kasagi);
+    for (const sx of [-1, 1]) {
+      const uc = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 0.38), kirmizi);
+      uc.position.set(sx * 3.85, 4.12, 0);
+      uc.rotation.z = sx * -0.14;
+      torii.add(uc);
+    }
+    const shimaki = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.15, 0.34), kirmizi);
+    shimaki.position.set(0, 3.83, 0);
+    torii.add(shimaki);
+    // Nuki (alt bağ kirişi) + ortada gakuzuka levhası
+    const nuki = new THREE.Mesh(new THREE.BoxGeometry(6.9, 0.2, 0.26), kirmizi);
+    nuki.position.set(0, 2.95, 0);
+    torii.add(nuki);
+    const gaku = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.72, 0.1), siyah);
+    gaku.position.set(0, 3.42, 0.17);
+    torii.add(gaku);
+    torii.position.set(0, 0, L / 2 - 4.2); // girişte, ilk eserlerden önce
+    scene.add(torii);
+  }
+
+  // --- Duvar diplerinde taş fenerler (ishidoro) ---
+  if (d.tasFener) {
+    const tas = new THREE.MeshStandardMaterial({ color: 0x8f8b83, roughness: 0.95, metalness: 0 });
+    const ates = new THREE.MeshBasicMaterial({ color: 0xffce88 });
+    const fenerYap = () => {
+      const g = new THREE.Group();
+      const kaide = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.14, 10), tas); kaide.position.y = 0.07; g.add(kaide);
+      const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.5, 8), tas); govde.position.y = 0.4; g.add(govde);
+      const tabla = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.08, 8), tas); tabla.position.y = 0.69; g.add(tabla);
+      const hazne = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.26), tas); hazne.position.y = 0.86; g.add(hazne);
+      const alev = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.17, 0.15), ates); alev.position.y = 0.86; g.add(alev);
+      const cati = new THREE.Mesh(new THREE.ConeGeometry(0.27, 0.2, 6), tas); cati.position.y = 1.06; cati.rotation.y = Math.PI / 6; g.add(cati);
+      const tepe = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), tas); tepe.position.y = 1.2; g.add(tepe);
+      return g;
+    };
+    let taraf = 1;
+    for (let z = L / 2 - 11; z > -L / 2 + 6; z -= 15) {
+      const f = fenerYap();
+      f.position.set(taraf * 3.4, 0, z); // oyuncu sınırının (±3.2) hemen dışı
+      scene.add(f);
+      taraf *= -1;
+    }
+  }
+
+  // --- Hol boyunca asılı kırmızı kağıt fenerler (chochin) ---
+  if (d.chochin) {
+    const choMat = new THREE.MeshBasicMaterial({ map: chochinDokusu() }); // kendinden aydınlık
+    const kapak = new THREE.MeshBasicMaterial({ color: 0x141414 });
+    const ip = new THREE.MeshBasicMaterial({ color: 0x2a2a2a });
+    const govdeGeo = new THREE.SphereGeometry(0.2, 16, 12);
+    const ustGeo = new THREE.CylinderGeometry(0.085, 0.1, 0.05, 10);
+    const altGeo = new THREE.CylinderGeometry(0.06, 0.045, 0.05, 10);
+    const ipGeo = new THREE.CylinderGeometry(0.006, 0.006, 1.0, 6);
+    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 6.5) {
+      for (const sx of [-1, 1]) {
+        const g = new THREE.Group();
+        const govde = new THREE.Mesh(govdeGeo, choMat); govde.scale.set(1, 1.35, 1); g.add(govde);
+        const ust = new THREE.Mesh(ustGeo, kapak); ust.position.y = 0.27; g.add(ust);
+        const alt = new THREE.Mesh(altGeo, kapak); alt.position.y = -0.28; g.add(alt);
+        const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.8; g.add(askı);
+        g.position.set(sx * 2.45, 4.0, z);
+        scene.add(g);
+      }
+    }
+  }
 }
 
 // ---------- Tablo + çerçeve + plaket ----------
