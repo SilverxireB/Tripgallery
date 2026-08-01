@@ -60,6 +60,19 @@ body {
   #gren { display: none; }
 }
 
+/* Bölümler arası geçiş perdesi — kapıdan geçişi kesintisiz gösterir */
+#perde {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.42s ease;
+}
+
+#perde.kapali { opacity: 1; }
+
 .hidden { display: none !important; }
 
 .dim { color: var(--text-dim); }

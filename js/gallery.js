@@ -10,6 +10,9 @@ const qs = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const GEZI = params.get("gezi");           // null => hub (giriş salonu)
 const HUB_MODU = !GEZI;
+// akis=1: ziyaretçi bir kapıdan yürüyerek geldi. Karşılama ekranı gösterilmez,
+// gezinti anında sürer — bölümler ayrı sayfalar olsa da tek bina gibi akar.
+const AKIS = params.get("akis") === "1";
 const NOT_ANAHTARI = `galeriNotlar:${GEZI || "hub"}`;
 // Yayın modu: notlar salt okunur. Sahibi ?duzenle=1 ile düzenlemeyi açabilir.
 const DUZENLE = params.get("duzenle") === "1";
@@ -71,6 +74,21 @@ function yerelNotKaydet(id, baslik, not) {
 }
 
 // ---------- Sahne ----------
+// ---------- Geçiş perdesi ----------
+// Kapıdan geçerken kararır, yeni bölüm açılınca çözülür. Sayfa değişse de
+// ziyaretçi tek bir binanın içinde yürüyormuş gibi hisseder.
+const perde = qs("#perde");
+if (perde && AKIS) perde.classList.add("kapali"); // kapıdan gelindi: siyahla başla
+
+function perdeKapatVeGit(url) {
+  if (perde) perde.classList.add("kapali");
+  setTimeout(() => { location.href = url; }, 380);
+}
+
+function perdeAc() {
+  if (perde) requestAnimationFrame(() => perde.classList.remove("kapali"));
+}
+
 const canvas = qs("#sahne");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -674,135 +692,35 @@ function holKur(fotoSayisi, baslik, aciklama) {
   tanitimSpot.target.position.set(0, 2.2, -L / 2);
   scene.add(tanitimSpot, tanitimSpot.target);
 
-  // --- Atrium: büyük karşılama salonu (hub) ---
-  // Ziyaretçi burada doğar; çevresinde her geziye açılan kapılar vardır.
-  // Bu sayfanın sergisi orta kapıdan (öne); diğer geziler yan/arka
-  // kapılardan. Açık gezinin kapısına tıklayınca o sergiye gidilir.
-  const AW = 15, AD = 13, AH = 6.4;
-  const AZ = L / 2 + AD / 2;   // atrium merkezi (z)
-  const arkaZ = L / 2 + AD;    // atrium arka duvarı
-  HUB = { AW, AD, AH, onZ: L / 2, arkaZ, merkezZ: AZ };
-
-  // Zemin: ayna yansıması + cilalı taş
-  const atrYansima = new Reflector(new THREE.PlaneGeometry(AW, AD), {
-    textureWidth: 1024, textureHeight: 1024, color: 0x777777,
-  });
-  atrYansima.rotation.x = -Math.PI / 2;
-  atrYansima.position.set(0, 0.004, AZ);
-  scene.add(atrYansima);
-  const atrZeminDoku = mermerZeminDokusu();
-  atrZeminDoku.repeat.set(AW / 4, AD / 4);
-  const atrZemin = new THREE.Mesh(
-    new THREE.PlaneGeometry(AW, AD),
-    new THREE.MeshStandardMaterial({ map: atrZeminDoku, roughness: 0.3, metalness: 0.06, transparent: true, opacity: 0.9 })
-  );
-  atrZemin.rotation.x = -Math.PI / 2;
-  atrZemin.position.set(0, 0.012, AZ);
-  scene.add(atrZemin);
-
-  // Tavan + büyük tepe ışıklığı
-  const atrTavan = new THREE.Mesh(new THREE.PlaneGeometry(AW, AD),
-    new THREE.MeshStandardMaterial({ color: 0xe6e0d2, roughness: 0.95 }));
-  atrTavan.rotation.x = Math.PI / 2;
-  atrTavan.position.set(0, AH, AZ);
-  scene.add(atrTavan);
-  const atrSkylight = new THREE.Mesh(new THREE.PlaneGeometry(AW * 0.52, AD * 0.52),
-    new THREE.MeshBasicMaterial({ color: 0xfff7e8 }));
-  atrSkylight.rotation.x = Math.PI / 2;
-  atrSkylight.position.set(0, AH - 0.02, AZ);
-  scene.add(atrSkylight);
-  const atrIsik = new THREE.RectAreaLight(0xfff3e0, 2.8, AW * 0.52, AD * 0.52);
-  atrIsik.position.set(0, AH - 0.05, AZ);
-  atrIsik.rotation.x = -Math.PI / 2;
-  scene.add(atrIsik);
-  const atrDolgu = new THREE.PointLight(0xfff3e0, 20, 30);
-  atrDolgu.position.set(0, AH - 1, AZ);
-  scene.add(atrDolgu);
-
-  // Duvarlar
-  const atrArka = new THREE.Mesh(new THREE.PlaneGeometry(AW, AH), duvarMat);
-  atrArka.position.set(0, AH / 2, arkaZ);
-  atrArka.rotation.y = Math.PI;
-  scene.add(atrArka);
-  for (const taraf of [-1, 1]) {
-    const yan = new THREE.Mesh(new THREE.PlaneGeometry(AD, AH), duvarMat);
-    yan.position.set(taraf * AW / 2, AH / 2, AZ);
-    yan.rotation.y = -taraf * Math.PI / 2;
-    scene.add(yan);
-  }
-  // Ön duvar (hole bakan) — ortada 2.9 m kapı boşluğu; çift taraflı
+  // --- Serginin ön duvarı + Ana Salon (hub) çıkış kapısı ---
+  // Sergiye girince doğrudan eserlerin arasında doğulur (büyük foyer yok).
+  // Ön duvarda tek çıkış kapısı hub'a döner.
+  HUB = null; // trip modunda hub yok
   const onMat = new THREE.MeshStandardMaterial({ map: sivaDokusu(), roughness: 0.92, side: THREE.DoubleSide });
   onMat.map.repeat.set(6, 3);
-  const onYanW = (AW - 2.9) / 2;
+  const onYanW = (W - 2.9) / 2;
   for (const taraf of [-1, 1]) {
-    const on = new THREE.Mesh(new THREE.PlaneGeometry(onYanW, AH), onMat);
-    on.position.set(taraf * (1.45 + onYanW / 2), AH / 2, L / 2);
+    const on = new THREE.Mesh(new THREE.PlaneGeometry(onYanW, H), onMat);
+    on.position.set(taraf * (1.45 + onYanW / 2), H / 2, L / 2);
     scene.add(on);
   }
-  const onUst = new THREE.Mesh(new THREE.PlaneGeometry(2.9, AH - 3.45), onMat);
-  onUst.position.set(0, 3.45 + (AH - 3.45) / 2, L / 2);
+  const onUst = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 3.45), onMat);
+  onUst.position.set(0, 3.45 + (H - 3.45) / 2, L / 2);
   scene.add(onUst);
 
-  // Köşe kolonları (görkem)
-  const kolonMat = new THREE.MeshStandardMaterial({ color: 0xece5d6, roughness: 0.85 });
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const kx = sx * (AW / 2 - 1.1), kz = AZ + sz * (AD / 2 - 1.1);
-    const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, AH, 20), kolonMat);
-    govde.position.set(kx, AH / 2, kz);
-    scene.add(govde);
-    for (const [py, ph] of [[0.28, 0.5], [AH - 0.3, 0.5]]) {
-      const bas = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, ph, 20), kolonMat);
-      bas.position.set(kx, py, kz);
-      scene.add(bas);
-    }
-  }
-
-  // Zemin madalyonu (atrium merkezinde, büyük)
-  const madalyonDoku = (() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 512;
-    const x = c.getContext("2d");
-    x.clearRect(0, 0, 512, 512);
-    x.strokeStyle = "rgba(201, 162, 39, 0.5)";
-    x.lineWidth = 5;
-    x.beginPath(); x.arc(256, 256, 240, 0, Math.PI * 2); x.stroke();
-    x.lineWidth = 2;
-    x.beginPath(); x.arc(256, 256, 216, 0, Math.PI * 2); x.stroke();
-    x.beginPath(); x.arc(256, 256, 120, 0, Math.PI * 2); x.stroke();
-    x.strokeStyle = "rgba(201, 162, 39, 0.3)";
-    for (let i = 0; i < 32; i++) {
-      const a = (i / 32) * Math.PI * 2;
-      x.beginPath();
-      x.moveTo(256 + Math.cos(a) * 216, 256 + Math.sin(a) * 216);
-      x.lineTo(256 + Math.cos(a) * 240, 256 + Math.sin(a) * 240);
-      x.stroke();
-    }
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 8;
-    return t;
-  })();
-  const madalyon = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 7.5),
-    new THREE.MeshBasicMaterial({ map: madalyonDoku, transparent: true, depthWrite: false }));
-  madalyon.rotation.x = -Math.PI / 2;
-  madalyon.position.set(0, 0.02, AZ);
-  scene.add(madalyon);
-
-  // Öndeki sergi tabelası (bu sayfanın gezisi) — hem lobiye hem içeriye
-  const kapiTabela = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3),
-    new THREE.MeshBasicMaterial({ map: kapiDokusuCiz(baslik), transparent: true }));
-  kapiTabela.position.set(0, 4.45, L / 2 + 0.03);
-  scene.add(kapiTabela);
-  const kapiTabelaIc = kapiTabela.clone();
-  kapiTabelaIc.position.set(0, 4.3, L / 2 - 0.02);
-  kapiTabelaIc.rotation.y = Math.PI;
-  scene.add(kapiTabelaIc);
-
-  // Bu sayfa bir sergi; atriumun arka duvarında ana salona (hub) dönüş kapısı
-  hubKapisiInsa(
-    { ad: "Ana Salon", renk: 0xc9a227, acik: true, hedef: "./", altbaslik: "← geri dön" },
-    { x: 0, z: arkaZ - 0.06, ry: Math.PI }
-  );
+  // Çıkış nişan paneli (yüzü hole/-Z dönük): "Ana Salon →" ipucu + tık
+  const cikisPanel = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 3.2),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  cikisPanel.position.set(0, 1.7, L / 2 - 0.16);
+  cikisPanel.rotation.y = Math.PI;
+  cikisPanel.userData = { kapiHedef: "./", kapiAd: "Ana Salon", kapiAcik: true };
+  scene.add(cikisPanel);
+  kapilar.push(cikisPanel);
+  const cikisTabela = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.9),
+    new THREE.MeshBasicMaterial({ map: hubTabelaDokusu("Ana Salon", "← geri dön", 0xc9a227), transparent: true }));
+  cikisTabela.position.set(0, 4.15, L / 2 - 0.04);
+  cikisTabela.rotation.y = Math.PI;
+  scene.add(cikisTabela);
 
   // --- Giriş kapısı (Lobi ile hol arası çift kanatlı kapı) ---
   const kapiGrubu = new THREE.Group();
@@ -1406,13 +1324,20 @@ function muzikKur(veri) {
   const kaynak = veri.muzik || `assets/${GEZI}/muzik.mp3`;
   const a = new Audio(kaynak);
   a.loop = true;
-  a.volume = 0.22;
+  a.volume = 0.0; // girişte 0'dan yükselir (render döngüsü rampalar)
   a.addEventListener("error", () => { muzik = null; }); // dosya yoksa sessizce vazgeç
   muzik = a;
 }
 
 function muzikOynat() {
-  if (muzik && muzikAcik && muzik.paused) muzik.play().catch(() => {});
+  if (!muzik || !muzikAcik || !muzik.paused) return;
+  muzik.play().catch(() => {
+    // Tarayıcı jest istiyor (kapıdan gelindiğinde olabilir): ilk dokunuşta dene
+    const tekrar = () => { muzik && muzik.play().catch(() => {}); };
+    addEventListener("pointerdown", tekrar, { once: true });
+    addEventListener("keydown", tekrar, { once: true });
+    addEventListener("touchstart", tekrar, { once: true });
+  });
 }
 
 addEventListener("keydown", (e) => {
@@ -1545,7 +1470,7 @@ function hareketGuncelle(dt) {
   // Kapı aralığından geçerken kasaya sürtme
   if (Math.abs(p.z - esik) < 0.35) p.x = THREE.MathUtils.clamp(p.x, -1.0, 1.0);
 
-  const zUzak = HUB ? HUB.arkaZ - 0.6 : HOL.L / 2 + 6.5;
+  const zUzak = HUB ? HUB.arkaZ - 0.6 : HOL.L / 2 - 0.9; // trip: ön duvar sınırı
   p.z = THREE.MathUtils.clamp(p.z, -(HOL.L / 2 - 0.9), zUzak);
 
   const tempo = Math.hypot(hiz.x, hiz.z);
@@ -1930,7 +1855,7 @@ document.body.addEventListener("click", (e) => {
   if (performance.now() - girisZamani < 400) return; // giriş tıklaması tetiklemesin
   // Kapı hedefteyse: açık kapı -> hedefine git (sergi ya da ana salon)
   if (hedefKapi && hedefKapi.userData.kapiAcik && hedefKapi.userData.kapiHedef) {
-    location.href = hedefKapi.userData.kapiHedef;
+    perdeKapatVeGit(hedefKapi.userData.kapiHedef);
     return;
   }
   if (hedefEser) lightboxAc(hedefEser.userData.foto);
@@ -1947,6 +1872,19 @@ function gezintiBaslat() {
   giris.classList.add("hidden");
   qs("#hud").classList.remove("hidden");
   crosshair.classList.toggle("hidden", surukleModu);
+  muzikOynat(); // sergi müziği girişte başlar (hub'da muzik null -> no-op)
+  perdeAc();    // siyah perde çözülür: yeni bölüm belirir
+}
+
+// Kapıdan yürüyerek gelindiğinde karşılama ekranı gösterilmez: ziyaretçi
+// yürümeye kaldığı yerden devam eder. Fare kilidi jest ister, o yüzden
+// sürükle-bak moduyla başlanır; ilk tıklamada kilide geçilir.
+function akisBaslat() {
+  surukleModu = true;
+  const fareIpucu = qs("#ipucu-fare");
+  if (fareIpucu) fareIpucu.innerHTML = "<kbd>Fare</kbd> basılı tut & sürükle";
+  gezintiBaslat();
+  sesBaslat();
 }
 
 function gezintiDurdur() {
@@ -2171,7 +2109,12 @@ function hubKur() {
 function hubSesBaslat() {
   if (!hub) return;
   for (const k of hub.kapilar) {
-    if (k.ses && k.ses.paused) k.ses.play().catch(() => {}); // 0 sesle başlar, mesafeyle yükselir
+    if (!k.ses || !k.ses.paused) continue;
+    k.ses.play().catch(() => {  // jest gerekiyorsa ilk dokunuşta tekrar dene
+      const tekrar = () => { k.ses && k.ses.play().catch(() => {}); };
+      addEventListener("pointerdown", tekrar, { once: true });
+      addEventListener("touchstart", tekrar, { once: true });
+    });
   }
 }
 
@@ -2190,8 +2133,11 @@ function hubGuncelle(dt) {
     k.leaves.forEach((l) => { l.pivot.rotation.y = -l.sx * aci; });
     if (k.acik) {
       if (d < enYakinMes) { enYakinMes = d; enYakin = k; }
-      // Açık kapıya yürüyüp geçince o sergiye gir
-      if (gezintiAktif && d < 1.5 && performance.now() - girisZamani > 600) { location.href = k.hedef; }
+      // Açık kapıya yürüyüp geçince o sergiye gir — tıklama gerekmez
+      if (!hub.gecis && gezintiAktif && d < 1.6 && performance.now() - girisZamani > 600) {
+        hub.gecis = true;
+        perdeKapatVeGit(k.hedef + "&akis=1");
+      }
     }
   }
   hub.enYakin = enYakin;
@@ -2219,6 +2165,14 @@ async function hubBaslat() {
   btnGir.disabled = false;
   btnGir.textContent = "Salona Gir";
   btnGir.addEventListener("click", hubSesBaslat); // müzik ancak kullanıcı jestiyle
+
+  if (AKIS) {
+    // Sergiden çıkıp ana salona dönüldü: karşılama ekranı yok, yürüyüş sürer.
+    // Az geriden doğ ki çıkılan kapı hemen yeniden tetiklenmesin.
+    pObj.position.set(0, 1.7, -4.2);
+    hubSesBaslat();
+    akisBaslat();
+  }
 
   renderer.setAnimationLoop(() => {
     const dt = Math.min(saat.getDelta(), 0.05);
@@ -2286,28 +2240,34 @@ async function baslat() {
   // Holün sonundaki duvar: tam boy sinevizyon
   videowallKur(veri.fotograflar);
 
-  // Atriumun merkezinde doğ; yüzün sergi kapısına (−Z) dönük. Kapı uzakta
-  // olduğu için hemen açılmaz — ziyaretçi önce büyük salonu ve çevresindeki
-  // gezi kapılarını fark eder.
+  // Serginin içinde, ön çıkış kapısının hemen önünde doğ; yüzün eserlere
+  // (−Z) dönük. Böylece hub kapısından geçen ziyaretçi doğrudan sergide olur.
   const pObj = controls.getObject();
-  pObj.position.set(0, 1.7, HUB.merkezZ);
+  pObj.position.set(0, 1.7, L / 2 - 3.2);
   pObj.rotation.set(0, 0, 0);
 
   btnGir.disabled = false;
   btnGir.textContent = "Salona Gir";
 
+  // Hub kapısından yürüyerek gelindi: karşılama ekranı yok, doğrudan sergide
+  if (AKIS) akisBaslat();
+
+  let cikisYapildi = false;
   renderer.setAnimationLoop(() => {
     const dt = Math.min(saat.getDelta(), 0.05);
     zaman += dt;
 
-    // Mesafe bazlı otomatik kapı: erken açılır ki yürüyüş hiç kesilmesin
+    // Ön kapı = Ana Salon çıkışı. Yaklaşınca açılır; ortasına varınca hub'a döner.
     const kapiMesafe = Math.abs(pObj.position.z - (L / 2));
-    const kapiAcikYeni = gezintiAktif && kapiMesafe < 4.2;
+    const kapiAcikYeni = gezintiAktif && kapiMesafe < 3.4;
     if (kapiAcikYeni !== kapiAcik) {
       kapiAcik = kapiAcikYeni;
       kapiSesi(kapiAcik); // menteşe gıcırtısı
-      // Kapı ilk açıldığında müziği başlat
-      if (kapiAcik) muzikOynat();
+    }
+    if (!cikisYapildi && gezintiAktif && kapiMesafe < 1.4 &&
+        Math.abs(pObj.position.x) < 1.3 && performance.now() - girisZamani > 800) {
+      cikisYapildi = true;
+      perdeKapatVeGit("./?akis=1"); // Ana Salon'a dön
     }
 
     // Kapı animasyonu
@@ -2325,10 +2285,9 @@ async function baslat() {
       k.pivot.rotation.y = -k.sx * aci; // İçeriye (negatif yöne) açılsın
     });
 
-    // Müzik mekâna göre: lobide kısık, salonda tam — yumuşak geçişle
-    if (muzik && !muzik.paused) {
-      const hedefSes = pObj.position.z < L / 2 ? 0.3 : 0.12;
-      muzik.volume += (hedefSes - muzik.volume) * Math.min(dt * 1.2, 1);
+    // Sergi müziği: girer girmez çalar, sabit sesle
+    if (muzik && !muzik.paused && muzik.volume < 0.3) {
+      muzik.volume = Math.min(0.3, muzik.volume + dt * 0.4);
     }
 
     hareketGuncelle(dt);
