@@ -1443,10 +1443,36 @@ function hareketGuncelle(dt) {
     controls.moveForward(-hiz.z * dt);
   }
 
-  // Hub modu: hol yok, yalnızca atrium kutusuyla sınırla
+  // Hub modu: atrium kutusu + açık kapıların ardındaki koridorlara giriş izni.
+  // Kapı yeterince açıksa ve oyuncu açıklığın hizasındaysa duvar sınırı o
+  // yönde koridor içine uzatılır — ziyaretçi kapıdan gerçekten içeri yürür.
   if (HUB && HUB.hub) {
-    p.x = THREE.MathUtils.clamp(p.x, -(HUB.AW / 2 - 0.6), HUB.AW / 2 - 0.6);
-    p.z = THREE.MathUtils.clamp(p.z, -(HUB.AD / 2 - 0.6), HUB.AD / 2 - 0.6);
+    const yW = HUB.AW / 2 - 0.6, yD = HUB.AD / 2 - 0.6;
+    let minX = -yW, maksX = yW, minZ = -yD, maksZ = yD;
+    let koridorda = false;
+    if (hub) {
+      for (const k of hub.kapilar) {
+        if (!k.acik || k.acilma < 0.45) continue;
+        if (Math.abs(k.cx) < 0.01) {            // ön/arka kapı: z ekseninde
+          if (Math.abs(p.x) < 1.2) {
+            if (k.cz < 0) minZ = k.cz - 3.0; else maksZ = k.cz + 3.0;
+            if ((k.cz < 0 && p.z < k.cz + 0.4) || (k.cz > 0 && p.z > k.cz - 0.4)) koridorda = true;
+          }
+        } else {                                 // sol/sağ kapı: x ekseninde
+          if (Math.abs(p.z) < 1.2) {
+            if (k.cx < 0) minX = k.cx - 3.0; else maksX = k.cx + 3.0;
+            if ((k.cx < 0 && p.x < k.cx + 0.4) || (k.cx > 0 && p.x > k.cx - 0.4)) koridorda = true;
+          }
+        }
+      }
+    }
+    p.x = THREE.MathUtils.clamp(p.x, minX, maksX);
+    p.z = THREE.MathUtils.clamp(p.z, minZ, maksZ);
+    // Koridordayken yanlara sürtme (dar geçit)
+    if (koridorda) {
+      if (Math.abs(p.x) > Math.abs(p.z)) p.z = THREE.MathUtils.clamp(p.z, -1.2, 1.2);
+      else p.x = THREE.MathUtils.clamp(p.x, -1.2, 1.2);
+    }
     const t = Math.hypot(hiz.x, hiz.z);
     adimFazi += dt * t * 1.9;
     p.y = 1.7 + Math.sin(adimFazi) * Math.min(t / 40, 1) * 0.045;
@@ -1947,6 +1973,91 @@ addEventListener("keydown", (e) => {
 // ---------- Kapı yapımcısı (hub + sergi dönüş kapıları) ----------
 // Açılabilir çift kanatlı portal. leaves döndürür ki hub modu mesafeye göre
 // açıp kapatabilsin. cfg: { ad, renk, acik, hedef(url), altbaslik }.
+// Kapının ardındaki gerçek giriş koridoru ("içeriyi gör"). Serginin salonuyla
+// aynı malzeme dilini kullanır; ucu sisle karanlığa karışır, böylece koridor
+// devam ediyormuş hissi verir. Fotoğraflar geziden gerçek karelerdir.
+function vestibulKur(grup, cfg) {
+  const KW = 2.88, KH = 3.44, KD = 9;   // koridor eni / yüksekliği / derinliği
+  const mz = -KD / 2;                    // koridor merkezi (kapının arkası)
+
+  const zeminDoku = mermerZeminDokusu();
+  zeminDoku.repeat.set(KW / 4, KD / 4);
+  const zemin = new THREE.Mesh(new THREE.PlaneGeometry(KW, KD),
+    new THREE.MeshStandardMaterial({ map: zeminDoku, roughness: 0.32, metalness: 0.05 }));
+  zemin.rotation.x = -Math.PI / 2;
+  zemin.position.set(0, 0.01, mz);
+  grup.add(zemin);
+
+  const sivaD = sivaDokusu(); sivaD.repeat.set(3, 2);
+  const duvarM = new THREE.MeshStandardMaterial({ map: sivaD, roughness: 0.92 });
+  for (const sx of [-1, 1]) {
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(KD, KH), duvarM);
+    d.position.set(sx * KW / 2, KH / 2, mz);
+    d.rotation.y = -sx * Math.PI / 2;
+    grup.add(d);
+  }
+  const tavan = new THREE.Mesh(new THREE.PlaneGeometry(KW, KD),
+    new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.95 }));
+  tavan.rotation.x = Math.PI / 2;
+  tavan.position.set(0, KH, mz);
+  grup.add(tavan);
+
+  // Tavan ışık şeridi + koridoru dolduran sıcak ışık
+  const serit = new THREE.Mesh(new THREE.PlaneGeometry(KW * 0.42, KD - 1.4),
+    new THREE.MeshBasicMaterial({ color: 0xfff7e8 }));
+  serit.rotation.x = Math.PI / 2;
+  serit.position.set(0, KH - 0.02, mz);
+  grup.add(serit);
+  const isik = new THREE.PointLight(0xfff0d8, 9, 11, 1.6);
+  isik.position.set(0, KH - 0.6, mz + 1.5);
+  grup.add(isik);
+  const isik2 = new THREE.PointLight(cfg.renk, 4.5, 8, 1.8); // gezinin kimlik rengi
+  isik2.position.set(0, KH - 0.8, mz - 2.6);
+  grup.add(isik2);
+
+  // Koridorun ucu: karanlığa karışan kapanış (devam ediyor hissi)
+  const uc = new THREE.Mesh(new THREE.PlaneGeometry(KW, KH),
+    new THREE.MeshBasicMaterial({ color: 0x0f0d0b }));
+  uc.position.set(0, KH / 2, -KD + 0.02);
+  grup.add(uc);
+  const ucSis = new THREE.Mesh(new THREE.PlaneGeometry(KW, KH),
+    new THREE.MeshBasicMaterial({ color: 0x0f0d0b, transparent: true, opacity: 0.72 }));
+  ucSis.position.set(0, KH / 2, -KD + 2.2);
+  grup.add(ucSis);
+
+  // Yan duvarlarda gezinin gerçek fotoğrafları (çerçeveli, aydınlatılmış)
+  if (cfg.gezi) {
+    fetch(`data/${cfg.gezi}.json`, { cache: "force-cache" })
+      .then((y) => (y.ok ? y.json() : null))
+      .then((veri) => {
+        if (!veri || !veri.fotograflar || !veri.fotograflar.length) return;
+        const secim = [veri.fotograflar[0], veri.fotograflar[1] || veri.fotograflar[0]];
+        secim.forEach((foto, i) => {
+          dokuYukleyici.load(foto.src, (doku) => {
+            doku.colorSpace = THREE.SRGBColorSpace;
+            doku.anisotropy = MAKS_ANIZO;
+            const oran = doku.image.width / doku.image.height;
+            const h = Math.sqrt(1.55 / oran), w = oran * h;
+            const sx = i === 0 ? -1 : 1;
+            const g = new THREE.Group();
+            const cerceve = new THREE.Mesh(new THREE.BoxGeometry(w + 0.13, h + 0.13, 0.05),
+              new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.35, metalness: 0.15 }));
+            g.add(cerceve);
+            const fmat = new THREE.MeshBasicMaterial({ map: doku });
+            fmat.toneMapped = false;
+            const fm = new THREE.Mesh(new THREE.PlaneGeometry(w, h), fmat);
+            fm.position.z = 0.028;
+            g.add(fm);
+            g.position.set(sx * (KW / 2 - 0.04), 1.62, mz + (i === 0 ? 1.1 : -1.3));
+            g.rotation.y = -sx * Math.PI / 2;
+            grup.add(g);
+          });
+        });
+      })
+      .catch(() => {});
+  }
+}
+
 function hubKapisiInsa(cfg, yuva) {
   const grup = new THREE.Group();
   const acik = cfg.acik;
@@ -1978,13 +2089,10 @@ function hubKapisiInsa(cfg, yuva) {
     new THREE.MeshBasicMaterial({ color: cfg.renk }));
   serit.position.set(0, 0.12, 0.12);
   grup.add(serit);
-  // Kapı açılınca arkada gezinin renginde loş bir perde: boş karanlık yerine
-  // hedefi sezdirir (Japonya loş kırmızı, Tayland loş altın...).
-  const perdeMat = new THREE.MeshBasicMaterial({ color: cfg.renk });
-  perdeMat.color.multiplyScalar(0.22);
-  const perde = new THREE.Mesh(new THREE.PlaneGeometry(2.75, 3.45), perdeMat);
-  perde.position.set(0, 1.72, -0.5);
-  grup.add(perde);
+  // Kapının ardında serginin GERÇEK giriş koridoru inşa edilir: zemin,
+  // duvarlar, tavan ışığı ve o gezinin fotoğrafları. Kapı açılınca düz bir
+  // renk değil, derinliğe uzanan gerçek bir iç mekân görünür.
+  if (cfg.acik) vestibulKur(grup, cfg);
   const tabela = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.0),
     new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk), transparent: true }));
   tabela.position.set(0, 4.15, 0.03);
@@ -2092,7 +2200,8 @@ function hubKur() {
   GEZILER.slice(0, 4).forEach((gezi, i) => {
     const acik = gezi.durum === "acik";
     const rec = hubKapisiInsa(
-      { ad: gezi.ad, renk: gezi.renk, acik, hedef: acik ? `?gezi=${gezi.id}` : null, altbaslik: acik ? "Sergiye gir →" : gezi.altbaslik },
+      { ad: gezi.ad, renk: gezi.renk, acik, gezi: acik ? gezi.id : null,
+        hedef: acik ? `?gezi=${gezi.id}` : null, altbaslik: acik ? "Sergiye gir →" : gezi.altbaslik },
       yuvalar[i]
     );
     rec.gezi = gezi;
@@ -2127,14 +2236,18 @@ function hubGuncelle(dt) {
     // Açık kapı yaklaşınca açılır; kapanınca gıcırtı
     const hedef = (k.acik && gezintiAktif && d < 4.6) ? 1 : 0;
     if (hedef > 0.5 !== k.acikDurum) { k.acikDurum = hedef > 0.5; kapiSesi(k.acikDurum); }
-    k.acilma += (hedef - k.acilma) * Math.min(dt * 2.2, 1);
+    k.acilma += (hedef - k.acilma) * Math.min(dt * 3.2, 1);
     const ease = 1 - Math.pow(1 - k.acilma, 3);
     const aci = ease * (Math.PI / 2 + 0.25);
     k.leaves.forEach((l) => { l.pivot.rotation.y = -l.sx * aci; });
     if (k.acik) {
       if (d < enYakinMes) { enYakinMes = d; enYakin = k; }
-      // Açık kapıya yürüyüp geçince o sergiye gir — tıklama gerekmez
-      if (!hub.gecis && gezintiAktif && d < 1.6 && performance.now() - girisZamani > 600) {
+      // Kapıdan geçip koridorda ilerleyince sergi yüklenir — tıklama yok.
+      // Eşik koridorun içindedir: ziyaretçi önce içeriyi görüp yürür.
+      const icerlek = Math.abs(k.cx) < 0.01
+        ? (k.cz < 0 ? k.cz - p.z : p.z - k.cz)   // ön/arka kapı
+        : (k.cx < 0 ? k.cx - p.x : p.x - k.cx);  // sol/sağ kapı
+      if (!hub.gecis && gezintiAktif && icerlek > 1.9 && performance.now() - girisZamani > 600) {
         hub.gecis = true;
         perdeKapatVeGit(k.hedef + "&akis=1");
       }
