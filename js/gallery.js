@@ -1450,14 +1450,26 @@ function hareketGuncelle(dt) {
 
   controls.moveRight(hiz.x * dt);
   if (turModu && gezintiAktif) {
-    // Tur, bakış yönünden bağımsız hol ekseninde ilerler: eserlere dönüp
-    // bakmak yürüyüşü duvara saptırıp durdurmaz.
-    p.z += hiz.z * dt;
-    p.x = THREE.MathUtils.damp(p.x, 0, 1.5, dt); // yumuşakça orta hatta süzül
-    // Döngü: iki uçta yön değiştir. Kapı tarafındaki dönüş noktası kapı
-    // sensörünün (4.2 m) dışında — kapı her turda açılıp kapanmasın.
-    if (turYon < 0 && p.z <= -(HOL.L / 2 - 1.6)) turCevir(1);
-    else if (turYon > 0 && p.z >= HOL.L / 2 - 4.6) turCevir(-1);
+    // Tur, bakış yönünden bağımsız SALON EKSENİNDE ilerler: eserlere dönüp
+    // bakmak yürüyüşü duvara saptırıp durdurmaz. Salon döndürülmüş olabilir,
+    // bu yüzden ilerleme salonun yerel z ekseni boyunca uygulanır.
+    if (TEK_BINA && salon) {
+      _v.set(p.x, p.y, p.z);
+      salon.grup.worldToLocal(_v);
+      _v.z += hiz.z * dt;
+      _v.x = THREE.MathUtils.damp(_v.x, 0, 1.5, dt);
+      if (turYon < 0 && _v.z <= -(salon.L / 2 - 1.6)) turCevir(1);
+      else if (turYon > 0 && _v.z >= salon.L / 2 - 4.6) turCevir(-1);
+      salon.grup.localToWorld(_v);
+      p.x = _v.x; p.z = _v.z;
+    } else {
+      p.z += hiz.z * dt;
+      p.x = THREE.MathUtils.damp(p.x, 0, 1.5, dt); // yumuşakça orta hatta süzül
+      // Döngü: iki uçta yön değiştir. Kapı tarafındaki dönüş noktası kapı
+      // sensörünün (4.2 m) dışında — kapı her turda açılıp kapanmasın.
+      if (turYon < 0 && p.z <= -(HOL.L / 2 - 1.6)) turCevir(1);
+      else if (turYon > 0 && p.z >= HOL.L / 2 - 4.6) turCevir(-1);
+    }
   } else {
     controls.moveForward(-hiz.z * dt);
   }
@@ -2175,6 +2187,8 @@ const _v = new THREE.Vector3();
 
 function salonSok() {
   if (!salon) return;
+  // Önizleme koridorunu geri getir: yoksa kapının ardı boşlukta kalır
+  if (salon.kapi && salon.kapi.vestibul) salon.kapi.vestibul.visible = true;
   salon.grup.traverse((o) => {
     if (o.isMesh) {
       o.geometry?.dispose?.();
@@ -2345,14 +2359,24 @@ function hubSesBaslat() {
   }
 }
 
+// Bölgeye göre arayüz: tur düğmesi yalnızca sergi içinde görünür ve
+// hub'a dönüldüğünde tur kendiliğinden durur.
+function bolgeGorunum() {
+  if (!btnOtotur) return;
+  const sergide = bolge === "salon" && !!salon;
+  btnOtotur.style.display = sergide ? "" : "none";
+  if (!sergide && turModu) turuDurdur();
+}
+
 function hubGuncelle(dt) {
   if (!hub) return;
   const p = controls.getObject().position;
   let enYakin = null, enYakinMes = Infinity;
   for (const k of hub.kapilar) {
     const d = Math.hypot(p.x - k.cx, p.z - k.cz);
-    // Açık kapı yaklaşınca açılır; kapanınca gıcırtı
-    const hedef = (k.acik && gezintiAktif && d < 4.6) ? 1 : 0;
+    // Açık kapı yaklaşınca açılır; içindeyken açık kalır (arkandan kapanmaz)
+    const icerdeyim = bolge === "salon" && salon && salon.kapi === k;
+    const hedef = (k.acik && gezintiAktif && (icerdeyim || d < 5.2)) ? 1 : 0;
     if (hedef > 0.5 !== k.acikDurum) { k.acikDurum = hedef > 0.5; kapiSesi(k.acikDurum); }
     k.acilma += (hedef - k.acilma) * Math.min(dt * 3.2, 1);
     const ease = 1 - Math.pow(1 - k.acilma, 3);
@@ -2362,7 +2386,11 @@ function hubGuncelle(dt) {
       if (d < enYakinMes) { enYakinMes = d; enYakin = k; }
       // Ziyaretçi kapıya yaklaşırken salon arka planda kurulur. Koridorda
       // yürürken hazır olur; sınır kalkar ve yürüyüş salona kesintisiz sürer.
-      if (gezintiAktif && d < 7.5 && (!salon || salon.gezi !== k.gezi.id)) salonYukle(k);
+      // Yalnızca hub'dayken ve kapıya belirgin biçimde yaklaşmışken yükle:
+      // salonun içindeyken ya da salonlar arasında gidip gelirken sökülüp
+      // yeniden kurulması görüntüyü savuruyordu.
+      if (gezintiAktif && bolge === "hub" && d < 5.5 &&
+          (!salon || salon.gezi !== k.gezi.id)) salonYukle(k);
     }
   }
   hub.enYakin = enYakin;
@@ -2384,7 +2412,9 @@ async function hubBaslat() {
   qs("#giris-baslik").textContent = "Gezi Galerim";
   qs("#giris-aciklama").textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
   document.title = "Gezi Galerim — Sanal Galeri";
-  const ototur = qs("#btn-ototur"); if (ototur) ototur.style.display = "none";
+  // Otomatik tur yalnızca bir serginin içindeyken anlamlı: hub'da gizli,
+  // salona girince belirir (bolgeGorunum her karede günceller).
+  if (btnOtotur) btnOtotur.style.display = "none";
 
   const pObj = controls.getObject();
   pObj.position.set(0, 1.7, 0);   // salonun tam merkezinde doğ
@@ -2402,6 +2432,7 @@ async function hubBaslat() {
     joyBakisGuncelle(dt);
     hedefGuncelle();
     hubGuncelle(dt);
+    bolgeGorunum();
     sakuraGuncelle(dt);     // yüklü salonun parçacıkları
     videowallGuncelle(dt);  // yüklü salonun sinevizyonu
     renderer.render(scene, camera);
