@@ -104,6 +104,11 @@ const scene = new THREE.Scene();
 
 // Salon inşası hedefi. Tek bina modunda salon, kapının arkasına asılan bir
 // gruba kurulur; hub doğrudan sahneye. ekle() bu hedefi kullanır.
+// Hub ile salonların ORTAK kullandığı dokular. Salon sökülürken bunlar
+// imha edilmemeli: aynı nesneleri hub kapıları da kullanıyor; imha edilince
+// kapılar dokusuz kalıyor ve her geçişte yeniden GPU'ya yükleniyordu.
+const PAYLASILAN_DOKULAR = new Set();
+
 let EKLE = scene;
 function ekle(...nesneler) { EKLE.add(...nesneler); return EKLE; }
 scene.background = new THREE.Color(0x0d0b09);
@@ -421,7 +426,7 @@ function plaketDokusuCiz(baslik, not) {
   return t;
 }
 
-function baslikDuvariDokusu(baslik, aciklama, adet) {
+function baslikDuvariDokusu(baslik, aciklama, adet, arkaSrc) {
   const c = document.createElement("canvas");
   c.width = 2048; c.height = 1024;
   const x = c.getContext("2d");
@@ -472,7 +477,7 @@ function baslikDuvariDokusu(baslik, aciklama, adet) {
     x.clearRect(0, 0, 2048, 1024);
     yaziCiz();
   };
-  img.src = `assets/${GEZI}/gp007.jpg`;
+  img.src = arkaSrc || `assets/${GEZI}/gp007.jpg`;
 
   return t;
 }
@@ -524,12 +529,17 @@ const plaketler = new Map();
 const golgeDoku = golgeDokusu();
 const cevizDoku = cevizDokusu();
 const isikGolu = isikGoluDokusu();
+// Bu üçü hem hub kapılarında hem salonlarda kullanılır: salon sökülürken
+// imha edilmemeleri için korumaya alınır.
+PAYLASILAN_DOKULAR.add(golgeDoku);
+PAYLASILAN_DOKULAR.add(cevizDoku);
+PAYLASILAN_DOKULAR.add(isikGolu);
 let HOL = { W: 8, L: 40, H: 5.2 };
 let HUB = null;            // atrium ölçüleri (holKur'da belirlenir)
 const kapilar = [];        // atrium gezi kapıları (nişangâh/tık hedefleri)
 let sakura = null; // havada süzülen kiraz çiçeği yaprakları
 
-function holKur(fotoSayisi, baslik, aciklama) {
+function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   const tarafBasina = Math.ceil(fotoSayisi / 2);
   // Döngülü tur orta hattan yürüdüğü için hol bir tık dar tutuldu:
   // eserler ~3.9 m bakış mesafesine gelir, plaketler yürürken okunur.
@@ -688,7 +698,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   const tanitim = new THREE.Mesh(
     new THREE.PlaneGeometry(W, H),
     new THREE.MeshBasicMaterial({
-      map: baslikDuvariDokusu(baslik, aciklama, fotoSayisi),
+      map: baslikDuvariDokusu(baslik, aciklama, fotoSayisi, arkaSrc),
       transparent: true,
     })
   );
@@ -1049,7 +1059,9 @@ function cerceveGeometrisi(w, h) {
 
 function tabloOlustur(foto, index, taraf, z, gercekSpot) {
   const hedefGrup = EKLE; // doku asenkron gelir; o anki salon grubunu sabitle
+  const jeton = salonJeton;
   dokuYukleyici.load(foto.src, (doku) => {
+    if (TEK_BINA && jeton !== salonJeton) { doku.dispose(); return; } // salon sökülmüş
     doku.colorSpace = THREE.SRGBColorSpace;
     doku.anisotropy = MAKS_ANIZO;
 
@@ -1266,7 +1278,9 @@ function videowallKur(fotograflar) {
   const ust = panelYap(-HOL.L / 2 + 0.037);
   videowall = { alt, ust, sira: 0, bekleme: 0, gecis: -1, yukleniyor: false,
                 fotograflar, gorunur: 0, ilkYuklendi: false };
+  const jeton = salonJeton;
   dokuYukleyici.load(fotograflar[0].src, (doku) => {
+    if (TEK_BINA && jeton !== salonJeton) { doku.dispose(); return; }
     alt.material.map = videowallKareDokusu(doku.image);
     alt.material.needsUpdate = true;
     videowall.ilkYuklendi = true;
@@ -2182,23 +2196,31 @@ let hub = null;
 // Tek bina: aynı anda tek salon yüklü tutulur. Ziyaretçi başka bir kapıya
 // yönelirse eskisi sökülür (bellek), yenisi kurulur.
 let salon = null;      // { gezi, grup, ry, kapi, L, W, H, veri }
+// Her salon inşasına bir jeton verilir. Salon sökülünce jeton degisir; geç
+// gelen doku yüklemeleri bunu görüp kendini imha eder (sızıntı önlenir).
+let salonJeton = 0;
 let bolge = "hub";     // "hub" | "salon"
 const _v = new THREE.Vector3();
 
 function salonSok() {
   if (!salon) return;
+  salonJeton++; // yoldaki doku yüklemeleri artık geçersiz
   // Önizleme koridorunu geri getir: yoksa kapının ardı boşlukta kalır
   if (salon.kapi && salon.kapi.vestibul) salon.kapi.vestibul.visible = true;
+  const dokuImha = (t) => { if (t && !PAYLASILAN_DOKULAR.has(t)) t.dispose(); };
   salon.grup.traverse((o) => {
-    if (o.isMesh) {
-      o.geometry?.dispose?.();
-      const m = o.material;
-      if (Array.isArray(m)) m.forEach((x) => { x.map?.dispose?.(); x.dispose?.(); });
-      else if (m) { m.map?.dispose?.(); m.dispose?.(); }
+    if (o.isReflector) o.dispose?.(); // aynanın render hedefi de bırakılmalı
+    if (!o.isMesh) return;
+    o.geometry?.dispose?.();
+    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of mats) {
+      dokuImha(m.map);
+      m.dispose?.();
     }
   });
   scene.remove(salon.grup);
   eserler.length = 0;
+  plaketler.clear();
   sakura = null;
   videowall = null;
   salon = null;
@@ -2214,13 +2236,15 @@ async function salonYukle(kapi) {
     const yanit = await fetch(`data/${kapi.gezi.id}.json`, { cache: "force-cache" });
     if (!yanit.ok) throw new Error(yanit.status);
     const veri = await yanit.json();
-    salonSok(); // aynı anda tek salon
+    salonSok();     // aynı anda tek salon
+    salonJeton++;   // bu inşanın kendi jetonu (öncekiler geçersiz)
 
     TEMA = TEMALAR[veri.tema] || TEMALAR[kapi.gezi.id] || TEMALAR.varsayilan;
     const grup = new THREE.Group();
     scene.add(grup);
     EKLE = grup;                       // bundan sonraki inşa gruba gider
-    const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama);
+    const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama,
+                       veri.fotograflar[0]?.src);
     const L = hol.L;
     const gercekSpot = veri.fotograflar.length <= 22;
     veri.fotograflar.forEach((foto, i) => {
