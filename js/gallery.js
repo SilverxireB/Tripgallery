@@ -13,6 +13,9 @@ const HUB_MODU = !GEZI;
 // akis=1: ziyaretçi bir kapıdan yürüyerek geldi. Karşılama ekranı gösterilmez,
 // gezinti anında sürer — bölümler ayrı sayfalar olsa da tek bina gibi akar.
 const AKIS = params.get("akis") === "1";
+// Tek bina: hub ve sergiler aynı sahnede yaşar. Ziyaretçi koridordayken
+// hedef salon arka planda kurulur; yürüyüş hiç kesilmez, sayfa değişmez.
+const TEK_BINA = HUB_MODU;
 const NOT_ANAHTARI = `galeriNotlar:${GEZI || "hub"}`;
 // Yayın modu: notlar salt okunur. Sahibi ?duzenle=1 ile düzenlemeyi açabilir.
 const DUZENLE = params.get("duzenle") === "1";
@@ -98,6 +101,11 @@ renderer.toneMappingExposure = 1.0;
 const MAKS_ANIZO = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
+
+// Salon inşası hedefi. Tek bina modunda salon, kapının arkasına asılan bir
+// gruba kurulur; hub doğrudan sahneye. ekle() bu hedefi kullanır.
+let EKLE = scene;
+function ekle(...nesneler) { EKLE.add(...nesneler); return EKLE; }
 scene.background = new THREE.Color(0x0d0b09);
 
 // Sinematik film taneciği: statik gürültü karosu, CSS animasyonuyla kıpırdar
@@ -129,7 +137,7 @@ const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.1, 30
 // deviriliyor ve renkleri soluyordu. Doğrudan render = aslına sadık fotoğraf.
 
 const controls = new PointerLockControls(camera, document.body);
-scene.add(controls.getObject());
+ekle(controls.getObject());
 
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
@@ -537,7 +545,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
     color: 0x828282,
   });
   yansima.rotation.x = -Math.PI / 2;
-  scene.add(yansima);
+  ekle(yansima);
 
   const zeminDoku = mermerZeminDokusu();
   zeminDoku.repeat.set(W / 4, L / 4);
@@ -553,7 +561,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   );
   zemin.rotation.x = -Math.PI / 2;
   zemin.position.y = 0.012;
-  scene.add(zemin);
+  ekle(zemin);
 
   // Duvar diplerinde koyu mermer bordür şeridi
   const bordurMat = new THREE.MeshStandardMaterial({ color: 0x4d4234, roughness: 0.25, metalness: 0.1 });
@@ -561,7 +569,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
     const bordur = new THREE.Mesh(new THREE.PlaneGeometry(0.55, L), bordurMat);
     bordur.rotation.x = -Math.PI / 2;
     bordur.position.set(taraf * (W / 2 - 0.3), 0.013, 0);
-    scene.add(bordur);
+    ekle(bordur);
   }
 
   // --- Tavan ---
@@ -569,7 +577,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   const tavan = new THREE.Mesh(new THREE.PlaneGeometry(W, L), tavanMat);
   tavan.rotation.x = Math.PI / 2;
   tavan.position.y = H;
-  scene.add(tavan);
+  ekle(tavan);
 
   // Tavan ışıklığı (laylight) — temaya göre desen alır (Japonya: shoji)
   const isiklikMat = new THREE.MeshBasicMaterial({ color: 0xfff7e8 });
@@ -582,24 +590,24 @@ function holKur(fotoSayisi, baslik, aciklama) {
   const isiklik = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.42, L - 8), isiklikMat);
   isiklik.rotation.x = Math.PI / 2;
   isiklik.position.y = H - 0.02;
-  scene.add(isiklik);
+  ekle(isiklik);
 
   const kasaMat = new THREE.MeshStandardMaterial({ color: 0x2a241c, roughness: 0.5, metalness: 0.4 });
   for (const sx of [-1, 1]) {
     const kasa = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, L - 8), kasaMat);
     kasa.position.set(sx * W * 0.21, H - 0.05, 0);
-    scene.add(kasa);
+    ekle(kasa);
   }
   for (const sz of [-1, 1]) {
     const kasa = new THREE.Mesh(new THREE.BoxGeometry(W * 0.42, 0.1, 0.12), kasaMat);
     kasa.position.set(0, H - 0.05, sz * (L - 8) / 2);
-    scene.add(kasa);
+    ekle(kasa);
   }
 
   const alanIsigi = new THREE.RectAreaLight(0xfff3e0, 3.1, W * 0.42, L - 8);
   alanIsigi.position.set(0, H - 0.05, 0);
   alanIsigi.rotation.x = -Math.PI / 2;
-  scene.add(alanIsigi);
+  ekle(alanIsigi);
 
   // --- Duvarlar ---
   const duvarDoku = sivaDokusu();
@@ -610,13 +618,13 @@ function holKur(fotoSayisi, baslik, aciklama) {
     const duvar = new THREE.Mesh(new THREE.PlaneGeometry(L, H), duvarMat);
     duvar.position.set(taraf * W / 2, H / 2, 0);
     duvar.rotation.y = -taraf * Math.PI / 2;
-    scene.add(duvar);
+    ekle(duvar);
   }
   // Holün sonundaki (arka) duvar
   const duvarArka = new THREE.Mesh(new THREE.PlaneGeometry(W, H), duvarMat);
   duvarArka.position.set(0, H / 2, -L / 2);
   duvarArka.rotation.y = 0;
-  scene.add(duvarArka);
+  ekle(duvarArka);
 
   // --- Mimari ritim: pilastrlar (duvar) + kirişler (tavan) ---
   const pilastrMat = new THREE.MeshStandardMaterial({ color: 0xf0e9db, roughness: 0.85 });
@@ -627,19 +635,19 @@ function holKur(fotoSayisi, baslik, aciklama) {
     for (const taraf of [-1, 1]) {
       const pilastr = new THREE.Mesh(new THREE.BoxGeometry(0.14, H - 0.3, 0.55), pilastrMat);
       pilastr.position.set(taraf * (W / 2 - 0.07), (H - 0.3) / 2 + 0.02, z);
-      scene.add(pilastr);
+      ekle(pilastr);
       // pilastr başlığı ve kaidesi
       for (const [py, ph] of [[0.14, 0.22], [H - 0.42, 0.16]]) {
         const trim = new THREE.Mesh(new THREE.BoxGeometry(0.2, ph, 0.68), pilastrMat);
         trim.position.set(taraf * (W / 2 - 0.1), py, z);
-        scene.add(trim);
+        ekle(trim);
       }
     }
 
     // tavan kirişi (ışıklığın camekân çıtası gibi üzerinden geçer)
     const kiris = new THREE.Mesh(new THREE.BoxGeometry(W, 0.14, 0.26), kirisMat);
     kiris.position.set(0, H - 0.07, z);
-    scene.add(kiris);
+    ekle(kiris);
   }
 
   // --- Süpürgelik + korniş + duvar dibi sahte AO ---
@@ -660,12 +668,12 @@ function holKur(fotoSayisi, baslik, aciklama) {
     const sup = new THREE.Mesh(new THREE.BoxGeometry(L, 0.16, 0.05), supurgelikMat);
     sup.position.set(taraf * (W / 2 - 0.028), 0.08, 0);
     sup.rotation.y = Math.PI / 2;
-    scene.add(sup);
+    ekle(sup);
 
     const kornis = new THREE.Mesh(new THREE.BoxGeometry(L, 0.12, 0.05), supurgelikMat);
     kornis.position.set(taraf * (W / 2 - 0.028), H - 0.06, 0);
     kornis.rotation.y = Math.PI / 2;
-    scene.add(kornis);
+    ekle(kornis);
 
     const ao = new THREE.Mesh(
       new THREE.PlaneGeometry(L, 0.7),
@@ -673,7 +681,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
     );
     ao.position.set(taraf * (W / 2 - 0.015), 0.35, 0);
     ao.rotation.y = -taraf * Math.PI / 2;
-    scene.add(ao);
+    ekle(ao);
   }
 
   // --- Sergi tanıtım duvarı (holün sonunda) ---
@@ -685,42 +693,44 @@ function holKur(fotoSayisi, baslik, aciklama) {
     })
   );
   tanitim.position.set(0, H / 2, -L / 2 + 0.03);
-  scene.add(tanitim);
+  ekle(tanitim);
 
   const tanitimSpot = new THREE.SpotLight(0xfff0d8, 26, 12, 0.7, 0.7, 1.6);
   tanitimSpot.position.set(0, H - 0.4, -L / 2 + 4);
   tanitimSpot.target.position.set(0, 2.2, -L / 2);
-  scene.add(tanitimSpot, tanitimSpot.target);
+  ekle(tanitimSpot, tanitimSpot.target);
 
-  // --- Serginin ön duvarı + Ana Salon (hub) çıkış kapısı ---
-  // Sergiye girince doğrudan eserlerin arasında doğulur (büyük foyer yok).
-  // Ön duvarda tek çıkış kapısı hub'a döner.
-  HUB = null; // trip modunda hub yok
+  // --- Serginin ön duvarı ---
+  // Tek bina modunda salon hub'ın kapısına asılıdır: ön duvarı ve çıkış
+  // kapısını hub sağlar, burada yeniden kurulmaz (üst üste binmesin).
   const onMat = new THREE.MeshStandardMaterial({ map: sivaDokusu(), roughness: 0.92, side: THREE.DoubleSide });
   onMat.map.repeat.set(6, 3);
   const onYanW = (W - 2.9) / 2;
-  for (const taraf of [-1, 1]) {
-    const on = new THREE.Mesh(new THREE.PlaneGeometry(onYanW, H), onMat);
-    on.position.set(taraf * (1.45 + onYanW / 2), H / 2, L / 2);
-    scene.add(on);
-  }
-  const onUst = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 3.45), onMat);
-  onUst.position.set(0, 3.45 + (H - 3.45) / 2, L / 2);
-  scene.add(onUst);
+  if (!TEK_BINA) {
+    HUB = null; // eski tek-sergi modunda hub yok
+    for (const taraf of [-1, 1]) {
+      const on = new THREE.Mesh(new THREE.PlaneGeometry(onYanW, H), onMat);
+      on.position.set(taraf * (1.45 + onYanW / 2), H / 2, L / 2);
+      ekle(on);
+    }
+    const onUst = new THREE.Mesh(new THREE.PlaneGeometry(2.9, H - 3.45), onMat);
+    onUst.position.set(0, 3.45 + (H - 3.45) / 2, L / 2);
+    ekle(onUst);
 
-  // Çıkış nişan paneli (yüzü hole/-Z dönük): "Ana Salon →" ipucu + tık
-  const cikisPanel = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 3.2),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-  cikisPanel.position.set(0, 1.7, L / 2 - 0.16);
-  cikisPanel.rotation.y = Math.PI;
-  cikisPanel.userData = { kapiHedef: "./", kapiAd: "Ana Salon", kapiAcik: true };
-  scene.add(cikisPanel);
-  kapilar.push(cikisPanel);
-  const cikisTabela = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.9),
-    new THREE.MeshBasicMaterial({ map: hubTabelaDokusu("Ana Salon", "← geri dön", 0xc9a227), transparent: true }));
-  cikisTabela.position.set(0, 4.15, L / 2 - 0.04);
-  cikisTabela.rotation.y = Math.PI;
-  scene.add(cikisTabela);
+    // Çıkış nişan paneli (yüzü hole/-Z dönük): "Ana Salon →" ipucu + tık
+    const cikisPanel = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 3.2),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    cikisPanel.position.set(0, 1.7, L / 2 - 0.16);
+    cikisPanel.rotation.y = Math.PI;
+    cikisPanel.userData = { kapiHedef: "./", kapiAd: "Ana Salon", kapiAcik: true };
+    ekle(cikisPanel);
+    kapilar.push(cikisPanel);
+    const cikisTabela = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.9),
+      new THREE.MeshBasicMaterial({ map: hubTabelaDokusu("Ana Salon", "← geri dön", 0xc9a227), transparent: true }));
+    cikisTabela.position.set(0, 4.15, L / 2 - 0.04);
+    cikisTabela.rotation.y = Math.PI;
+    ekle(cikisTabela);
+  }
 
   // --- Giriş kapısı (Lobi ile hol arası çift kanatlı kapı) ---
   const kapiGrubu = new THREE.Group();
@@ -761,7 +771,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   }
 
   kapiGrubu.position.set(0, 0, L / 2);
-  scene.add(kapiGrubu);
+  ekle(kapiGrubu);
 
   // Not: Orta hattaki banklar kaldırıldı — döngülü tur tam o hattan
   // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
@@ -797,7 +807,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
       egim: Math.random() * Math.PI * 2,
     });
   }
-  scene.add(yapraklar);
+  ekle(yapraklar);
 
   // --- Yere düşen yaprakların biriktiği katman ---
   // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
@@ -818,7 +828,7 @@ function holKur(fotoSayisi, baslik, aciklama) {
   yerdeYapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   yerdeYapraklar.frustumCulled = false;
   yerdeYapraklar.count = 0; // boş başlar, düşen her yaprakla artar
-  scene.add(yerdeYapraklar);
+  ekle(yerdeYapraklar);
 
   sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0 };
   }
@@ -827,9 +837,13 @@ function holKur(fotoSayisi, baslik, aciklama) {
   dekorKur({ W, L, H });
 
   // --- Genel ışık ve atmosfer ---
-  scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
-  scene.add(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
-  scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
+  // Tek bina modunda ortam ışığı ve sis hub tarafından bir kez kurulur;
+  // her salon kendi kopyasını eklerse sahne kat kat aydınlanır.
+  if (!TEK_BINA) {
+    ekle(new THREE.AmbientLight(0xfff4e0, 0.32));
+    ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
+    scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
+  }
 
   return { W, L, H, tarafBasina, kanatlar };
 }
@@ -872,7 +886,7 @@ function dekorKur({ W, L, H }) {
     gaku.position.set(0, 3.42, 0.17);
     torii.add(gaku);
     torii.position.set(0, 0, L / 2 - 4.2); // girişte, ilk eserlerden önce
-    scene.add(torii);
+    ekle(torii);
   }
 
   // --- Duvar diplerinde taş fenerler (ishidoro) ---
@@ -894,7 +908,7 @@ function dekorKur({ W, L, H }) {
     for (let z = L / 2 - 11; z > -L / 2 + 6; z -= 15) {
       const f = fenerYap();
       f.position.set(taraf * 3.4, 0, z); // oyuncu sınırının (±3.2) hemen dışı
-      scene.add(f);
+      ekle(f);
       taraf *= -1;
     }
   }
@@ -916,7 +930,7 @@ function dekorKur({ W, L, H }) {
         const alt = new THREE.Mesh(altGeo, kapak); alt.position.y = -0.28; g.add(alt);
         const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.8; g.add(askı);
         g.position.set(sx * 2.45, 4.0, z);
-        scene.add(g);
+        ekle(g);
       }
     }
   }
@@ -954,7 +968,7 @@ function dekorKur({ W, L, H }) {
       kemer.add(chofa);
     }
     kemer.position.set(0, 0, L / 2 - 4.2);
-    scene.add(kemer);
+    ekle(kemer);
   }
 
   // --- Duvar diplerinde altın stupalar ---
@@ -974,7 +988,7 @@ function dekorKur({ W, L, H }) {
     for (let z = L / 2 - 11; z > -L / 2 + 6; z -= 15) {
       const s = yap();
       s.position.set(taraf * 3.4, 0, z);
-      scene.add(s);
+      ekle(s);
       taraf *= -1;
     }
   }
@@ -996,7 +1010,7 @@ function dekorKur({ W, L, H }) {
         const ust = new THREE.Mesh(ustGeo, kapak); ust.position.y = 0.23; g.add(ust);
         const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.78; g.add(askı);
         g.position.set(sx * 2.45, 4.0, z);
-        scene.add(g);
+        ekle(g);
       }
     }
   }
@@ -1034,6 +1048,7 @@ function cerceveGeometrisi(w, h) {
 }
 
 function tabloOlustur(foto, index, taraf, z, gercekSpot) {
+  const hedefGrup = EKLE; // doku asenkron gelir; o anki salon grubunu sabitle
   dokuYukleyici.load(foto.src, (doku) => {
     doku.colorSpace = THREE.SRGBColorSpace;
     doku.anisotropy = MAKS_ANIZO;
@@ -1160,7 +1175,7 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
     // Duvara yerleştir
     grup.position.set(taraf * (HOL.W / 2 - 0.02), 1.72, z);
     grup.rotation.y = taraf === -1 ? Math.PI / 2 : -Math.PI / 2;
-    scene.add(grup);
+    hedefGrup.add(grup);
   });
 }
 
@@ -1244,7 +1259,7 @@ function videowallKur(fotograflar) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(HOL.W, HOL.H), m);
     mesh.position.set(0, HOL.H / 2, z);
     mesh.visible = false; // menzil dışında gizli -> yansımaya girmez
-    scene.add(mesh);
+    ekle(mesh);
     return mesh;
   };
   const alt = panelYap(-HOL.L / 2 + 0.035);
@@ -1264,7 +1279,11 @@ function videowallGuncelle(dt) {
   const v = videowall;
 
   // Mesafe kapısı: arka duvara uzaklık. Yakınken belir, uzaklaşınca sön.
-  const mesafe = controls.getObject().position.z + HOL.L / 2;
+  // Salon döndürülmüş olabilir: mesafe salonun YEREL z ekseninde ölçülür
+  const _p = controls.getObject().position;
+  let yerelZ = _p.z;
+  if (salon) { _v.set(_p.x, _p.y, _p.z); salon.grup.worldToLocal(_v); yerelZ = _v.z; }
+  const mesafe = yerelZ + HOL.L / 2;
   const hedef = (gezintiAktif && mesafe < VW_MENZIL) ? 1 : 0;
   v.gorunur += (hedef - v.gorunur) * Math.min(dt * 2.5, 1);
 
@@ -1443,9 +1462,32 @@ function hareketGuncelle(dt) {
     controls.moveForward(-hiz.z * dt);
   }
 
+  // --- Tek bina: salonun içindeyken salonun YEREL uzayında sınırla ---
+  // Salon kapının arkasına döndürülmüş olarak asılıdır; dünya koordinatını
+  // salona çevirip mevcut hol mantığını uygular, sonra geri yazarız.
+  if (TEK_BINA && bolge === "salon" && salon) {
+    _v.set(p.x, p.y, p.z);
+    salon.grup.worldToLocal(_v);
+    const yariW = salon.W / 2 - 0.7;
+    _v.x = THREE.MathUtils.clamp(_v.x, -yariW, yariW);
+    if (_v.z > salon.L / 2) {           // ön açıklıktan çıkıldı -> hub'a dön
+      bolge = "hub";
+    } else {
+      _v.z = Math.max(_v.z, -(salon.L / 2 - 0.9));  // sondaki sinevizyon duvarı
+      // Ön açıklıkta kasa genişliği kadar daral (kapıdan geçiş hissi)
+      if (_v.z > salon.L / 2 - 0.5) _v.x = THREE.MathUtils.clamp(_v.x, -1.2, 1.2);
+      salon.grup.localToWorld(_v);
+      p.x = _v.x; p.z = _v.z;
+    }
+    const t2 = Math.hypot(hiz.x, hiz.z);
+    adimFazi += dt * t2 * 1.9;
+    p.y = 1.7 + Math.sin(adimFazi) * Math.min(t2 / 40, 1) * 0.045;
+    return;
+  }
+
   // Hub modu: atrium kutusu + açık kapıların ardındaki koridorlara giriş izni.
   // Kapı yeterince açıksa ve oyuncu açıklığın hizasındaysa duvar sınırı o
-  // yönde koridor içine uzatılır — ziyaretçi kapıdan gerçekten içeri yürür.
+  // yönde uzatılır — salon yüklüyse sınır kalkar, ziyaretçi salona yürür.
   if (HUB && HUB.hub) {
     const yW = HUB.AW / 2 - 0.6, yD = HUB.AD / 2 - 0.6;
     let minX = -yW, maksX = yW, minZ = -yD, maksZ = yD;
@@ -1453,15 +1495,21 @@ function hareketGuncelle(dt) {
     if (hub) {
       for (const k of hub.kapilar) {
         if (!k.acik || k.acilma < 0.45) continue;
+        const salonHazir = salon && salon.gezi === k.gezi.id;
+        const derinlik = salonHazir ? 1e4 : 3.0; // salon yüklüyse sınır yok
         if (Math.abs(k.cx) < 0.01) {            // ön/arka kapı: z ekseninde
           if (Math.abs(p.x) < 1.2) {
-            if (k.cz < 0) minZ = k.cz - 3.0; else maksZ = k.cz + 3.0;
-            if ((k.cz < 0 && p.z < k.cz + 0.4) || (k.cz > 0 && p.z > k.cz - 0.4)) koridorda = true;
+            if (k.cz < 0) minZ = k.cz - derinlik; else maksZ = k.cz + derinlik;
+            const icerlek = k.cz < 0 ? k.cz - p.z : p.z - k.cz;
+            if (icerlek > -0.4) koridorda = true;
+            if (salonHazir && icerlek > 0.5) bolge = "salon";
           }
         } else {                                 // sol/sağ kapı: x ekseninde
           if (Math.abs(p.z) < 1.2) {
-            if (k.cx < 0) minX = k.cx - 3.0; else maksX = k.cx + 3.0;
-            if ((k.cx < 0 && p.x < k.cx + 0.4) || (k.cx > 0 && p.x > k.cx - 0.4)) koridorda = true;
+            if (k.cx < 0) minX = k.cx - derinlik; else maksX = k.cx + derinlik;
+            const icerlek = k.cx < 0 ? k.cx - p.x : p.x - k.cx;
+            if (icerlek > -0.4) koridorda = true;
+            if (salonHazir && icerlek > 0.5) bolge = "salon";
           }
         }
       }
@@ -1469,7 +1517,7 @@ function hareketGuncelle(dt) {
     p.x = THREE.MathUtils.clamp(p.x, minX, maksX);
     p.z = THREE.MathUtils.clamp(p.z, minZ, maksZ);
     // Koridordayken yanlara sürtme (dar geçit)
-    if (koridorda) {
+    if (koridorda && bolge === "hub") {
       if (Math.abs(p.x) > Math.abs(p.z)) p.z = THREE.MathUtils.clamp(p.z, -1.2, 1.2);
       else p.x = THREE.MathUtils.clamp(p.x, -1.2, 1.2);
     }
@@ -1879,8 +1927,9 @@ document.body.addEventListener("click", (e) => {
   if (e.target.closest("button, a, input, textarea")) return;
   if (surukleModu && surukleMesafe > 6) return;
   if (performance.now() - girisZamani < 400) return; // giriş tıklaması tetiklemesin
-  // Kapı hedefteyse: açık kapı -> hedefine git (sergi ya da ana salon)
-  if (hedefKapi && hedefKapi.userData.kapiAcik && hedefKapi.userData.kapiHedef) {
+  // Tek binada kapıya tıklamak gerekmez (yürüyerek girilir); eski tek-sergi
+  // sayfaları için tıklayarak geçiş korunur.
+  if (!TEK_BINA && hedefKapi && hedefKapi.userData.kapiAcik && hedefKapi.userData.kapiHedef) {
     perdeKapatVeGit(hedefKapi.userData.kapiHedef);
     return;
   }
@@ -1976,7 +2025,9 @@ addEventListener("keydown", (e) => {
 // Kapının ardındaki gerçek giriş koridoru ("içeriyi gör"). Serginin salonuyla
 // aynı malzeme dilini kullanır; ucu sisle karanlığa karışır, böylece koridor
 // devam ediyormuş hissi verir. Fotoğraflar geziden gerçek karelerdir.
-function vestibulKur(grup, cfg) {
+function vestibulKur(anaGrup, cfg) {
+  const grup = new THREE.Group();   // ayrı grup: salon yüklenince gizlenebilir
+  anaGrup.add(grup);
   const KW = 2.88, KH = 3.44, KD = 9;   // koridor eni / yüksekliği / derinliği
   const mz = -KD / 2;                    // koridor merkezi (kapının arkası)
 
@@ -2056,6 +2107,7 @@ function vestibulKur(grup, cfg) {
       })
       .catch(() => {});
   }
+  return grup;
 }
 
 function hubKapisiInsa(cfg, yuva) {
@@ -2092,7 +2144,7 @@ function hubKapisiInsa(cfg, yuva) {
   // Kapının ardında serginin GERÇEK giriş koridoru inşa edilir: zemin,
   // duvarlar, tavan ışığı ve o gezinin fotoğrafları. Kapı açılınca düz bir
   // renk değil, derinliğe uzanan gerçek bir iç mekân görünür.
-  if (cfg.acik) vestibulKur(grup, cfg);
+  const vestibul = cfg.acik ? vestibulKur(grup, cfg) : null;
   const tabela = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.0),
     new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk), transparent: true }));
   tabela.position.set(0, 4.15, 0.03);
@@ -2105,22 +2157,88 @@ function hubKapisiInsa(cfg, yuva) {
   kapilar.push(hedefPanel);
   grup.position.set(yuva.x, 0, yuva.z);
   grup.rotation.y = yuva.ry;
-  scene.add(grup);
+  ekle(grup);
   const vurgu = new THREE.PointLight(cfg.renk, acik ? 9 : 6, 7, 2);
   vurgu.position.set(yuva.x - Math.sin(yuva.ry) * 1.4, 3.9, yuva.z + Math.cos(yuva.ry) * 1.4);
-  scene.add(vurgu);
-  return { leaves, cx: yuva.x, cz: yuva.z, hedef: cfg.hedef, acik, acilma: 0, acikDurum: false, ses: null };
+  ekle(vurgu);
+  return { leaves, cx: yuva.x, cz: yuva.z, ry: yuva.ry, hedef: cfg.hedef, acik,
+           acilma: 0, acikDurum: false, ses: null, vestibul, yukleniyor: false };
 }
 
 // ---------- Hub (giriş salonu): tüm gezilere açılan kapılar ----------
 let hub = null;
+// Tek bina: aynı anda tek salon yüklü tutulur. Ziyaretçi başka bir kapıya
+// yönelirse eskisi sökülür (bellek), yenisi kurulur.
+let salon = null;      // { gezi, grup, ry, kapi, L, W, H, veri }
+let bolge = "hub";     // "hub" | "salon"
+const _v = new THREE.Vector3();
+
+function salonSok() {
+  if (!salon) return;
+  salon.grup.traverse((o) => {
+    if (o.isMesh) {
+      o.geometry?.dispose?.();
+      const m = o.material;
+      if (Array.isArray(m)) m.forEach((x) => { x.map?.dispose?.(); x.dispose?.(); });
+      else if (m) { m.map?.dispose?.(); m.dispose?.(); }
+    }
+  });
+  scene.remove(salon.grup);
+  eserler.length = 0;
+  sakura = null;
+  videowall = null;
+  salon = null;
+}
+
+// Kapının arkasına o gezinin salonunu kurar. Salon grubu öyle yerleştirilir ki
+// salonun yerel z=+L/2 düzlemi (ön açıklığı) kapının dünya konumuna oturur.
+async function salonYukle(kapi) {
+  if (salon && salon.gezi === kapi.gezi.id) return true;
+  if (kapi.yukleniyor) return false;
+  kapi.yukleniyor = true;
+  try {
+    const yanit = await fetch(`data/${kapi.gezi.id}.json`, { cache: "force-cache" });
+    if (!yanit.ok) throw new Error(yanit.status);
+    const veri = await yanit.json();
+    salonSok(); // aynı anda tek salon
+
+    TEMA = TEMALAR[veri.tema] || TEMALAR[kapi.gezi.id] || TEMALAR.varsayilan;
+    const grup = new THREE.Group();
+    scene.add(grup);
+    EKLE = grup;                       // bundan sonraki inşa gruba gider
+    const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama);
+    const L = hol.L;
+    const gercekSpot = veri.fotograflar.length <= 22;
+    veri.fotograflar.forEach((foto, i) => {
+      const taraf = i % 2 === 0 ? -1 : 1;
+      const z = L / 2 - 6 - Math.floor(i / 2) * 3.7;
+      tabloOlustur(foto, i, taraf, z, gercekSpot);
+    });
+    videowallKur(veri.fotograflar);
+    EKLE = scene;                      // hedefi geri al
+
+    // Yerleştir: yerel (0,0,L/2) -> kapının dünya konumu
+    const ry = kapi.ry;
+    grup.rotation.y = ry;
+    grup.position.set(kapi.cx - Math.sin(ry) * (L / 2), 0, kapi.cz - Math.cos(ry) * (L / 2));
+    grup.updateMatrixWorld(true);
+
+    salon = { gezi: kapi.gezi.id, grup, ry, kapi, L, W: hol.W, H: hol.H, veri };
+    if (kapi.vestibul) { kapi.vestibul.visible = false; } // önizleme koridoru gizlenir
+    kapi.yukleniyor = false;
+    return true;
+  } catch {
+    kapi.yukleniyor = false;
+    return false;
+  }
+}
 
 function hubKur() {
   const AW = 17, AD = 17, AH = 6.6;
   HUB = { AW, AD, AH, hub: true };
   scene.fog = new THREE.Fog(0x151210, 16, 50);
-  scene.add(new THREE.AmbientLight(0xfff4e0, 0.36));
-  scene.add(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.4));
+  ekle(new THREE.AmbientLight(0xfff4e0, 0.36));
+  ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.4));
 
   const duvarDoku = sivaDokusu(); duvarDoku.repeat.set(5, 3);
   const duvarMat = new THREE.MeshStandardMaterial({ map: duvarDoku, roughness: 0.92 });
@@ -2128,20 +2246,20 @@ function hubKur() {
 
   // Zemin: ayna yansıması + cilalı taş
   const yansima = new Reflector(new THREE.PlaneGeometry(AW, AD), { textureWidth: 1024, textureHeight: 1024, color: 0x777777 });
-  yansima.rotation.x = -Math.PI / 2; yansima.position.y = 0.004; scene.add(yansima);
+  yansima.rotation.x = -Math.PI / 2; yansima.position.y = 0.004; ekle(yansima);
   const zeminDoku = mermerZeminDokusu(); zeminDoku.repeat.set(AW / 4, AD / 4);
   const zemin = new THREE.Mesh(new THREE.PlaneGeometry(AW, AD),
     new THREE.MeshStandardMaterial({ map: zeminDoku, roughness: 0.3, metalness: 0.06, transparent: true, opacity: 0.9 }));
-  zemin.rotation.x = -Math.PI / 2; zemin.position.y = 0.012; scene.add(zemin);
+  zemin.rotation.x = -Math.PI / 2; zemin.position.y = 0.012; ekle(zemin);
 
   // Tavan + tepe ışıklığı
   const tavan = new THREE.Mesh(new THREE.PlaneGeometry(AW, AD), tavanMat);
-  tavan.rotation.x = Math.PI / 2; tavan.position.y = AH; scene.add(tavan);
+  tavan.rotation.x = Math.PI / 2; tavan.position.y = AH; ekle(tavan);
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(AW * 0.5, AD * 0.5), new THREE.MeshBasicMaterial({ color: 0xfff7e8 }));
-  sky.rotation.x = Math.PI / 2; sky.position.y = AH - 0.02; scene.add(sky);
+  sky.rotation.x = Math.PI / 2; sky.position.y = AH - 0.02; ekle(sky);
   const rIsik = new THREE.RectAreaLight(0xfff3e0, 3.0, AW * 0.5, AD * 0.5);
-  rIsik.position.set(0, AH - 0.05, 0); rIsik.rotation.x = -Math.PI / 2; scene.add(rIsik);
-  const pIsik = new THREE.PointLight(0xfff3e0, 24, 40); pIsik.position.set(0, AH - 1, 0); scene.add(pIsik);
+  rIsik.position.set(0, AH - 0.05, 0); rIsik.rotation.x = -Math.PI / 2; ekle(rIsik);
+  const pIsik = new THREE.PointLight(0xfff3e0, 24, 40); pIsik.position.set(0, AH - 1, 0); ekle(pIsik);
 
   // Dört duvar — her birinde ortada 2.9 m kapı boşluğu
   const yanW = (AW - 2.9) / 2;
@@ -2153,7 +2271,7 @@ function hubKur() {
       const ust = new THREE.Mesh(new THREE.PlaneGeometry(2.9, AH - 3.45), duvarMat);
       ust.position.set(0, 3.45 + (AH - 3.45) / 2, 0);
       g.add(ust);
-      g.position.copy(merkez); g.rotation.y = ry; scene.add(g);
+      g.position.copy(merkez); g.rotation.y = ry; ekle(g);
     }
   }
   duvarKapiBoslukluYap(new THREE.Vector3(0, 0, -AD / 2), 0);        // ön
@@ -2166,10 +2284,10 @@ function hubKur() {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const kx = sx * (AW / 2 - 1.1), kz = sz * (AD / 2 - 1.1);
     const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, AH, 20), kolonMat);
-    govde.position.set(kx, AH / 2, kz); scene.add(govde);
+    govde.position.set(kx, AH / 2, kz); ekle(govde);
     for (const [py, ph] of [[0.28, 0.5], [AH - 0.3, 0.5]]) {
       const b = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, ph, 20), kolonMat);
-      b.position.set(kx, py, kz); scene.add(b);
+      b.position.set(kx, py, kz); ekle(b);
     }
   }
 
@@ -2187,7 +2305,7 @@ function hubKur() {
   })();
   const madalyon = new THREE.Mesh(new THREE.PlaneGeometry(8, 8),
     new THREE.MeshBasicMaterial({ map: madalyonDoku, transparent: true, depthWrite: false }));
-  madalyon.rotation.x = -Math.PI / 2; madalyon.position.y = 0.02; scene.add(madalyon);
+  madalyon.rotation.x = -Math.PI / 2; madalyon.position.y = 0.02; ekle(madalyon);
 
   // Kapılar: her geziye bir duvar
   const yuvalar = [
@@ -2242,22 +2360,19 @@ function hubGuncelle(dt) {
     k.leaves.forEach((l) => { l.pivot.rotation.y = -l.sx * aci; });
     if (k.acik) {
       if (d < enYakinMes) { enYakinMes = d; enYakin = k; }
-      // Kapıdan geçip koridorda ilerleyince sergi yüklenir — tıklama yok.
-      // Eşik koridorun içindedir: ziyaretçi önce içeriyi görüp yürür.
-      const icerlek = Math.abs(k.cx) < 0.01
-        ? (k.cz < 0 ? k.cz - p.z : p.z - k.cz)   // ön/arka kapı
-        : (k.cx < 0 ? k.cx - p.x : p.x - k.cx);  // sol/sağ kapı
-      if (!hub.gecis && gezintiAktif && icerlek > 1.9 && performance.now() - girisZamani > 600) {
-        hub.gecis = true;
-        perdeKapatVeGit(k.hedef + "&akis=1");
-      }
+      // Ziyaretçi kapıya yaklaşırken salon arka planda kurulur. Koridorda
+      // yürürken hazır olur; sınır kalkar ve yürüyüş salona kesintisiz sürer.
+      if (gezintiAktif && d < 7.5 && (!salon || salon.gezi !== k.gezi.id)) salonYukle(k);
     }
   }
   hub.enYakin = enYakin;
-  // Müzik: yalnızca en yakın açık kapı çalar; ses mesafeyle yükselir/azalır
+  // Müzik: salondayken o serginin parçası tam sesle; hub'da en yakın kapıdan
+  // mesafeyle sızar. Diğer tüm kapılar susar.
   for (const k of hub.kapilar) {
     if (!k.ses) continue;
-    const hedefSes = (k === enYakin && enYakinMes < 6) ? 0.32 * (1 - enYakinMes / 6) : 0;
+    let hedefSes = 0;
+    if (bolge === "salon" && salon && salon.gezi === k.gezi.id) hedefSes = 0.3;
+    else if (bolge === "hub" && k === enYakin && enYakinMes < 6) hedefSes = 0.32 * (1 - enYakinMes / 6);
     k.ses.volume += (hedefSes - k.ses.volume) * Math.min(dt * 1.6, 1);
     if (k.ses.volume < 0.003) k.ses.volume = 0;
   }
@@ -2267,7 +2382,7 @@ async function hubBaslat() {
   hubKur();
   qs("#giris-eyebrow").textContent = "SANAL GALERİ";
   qs("#giris-baslik").textContent = "Gezi Galerim";
-  qs("#giris-aciklama").textContent = "Bir sergi kapısına yürüyün — kapı açılır, müziği başlar. İçeri geçmek için kapıya girin ya da tıklayın.";
+  qs("#giris-aciklama").textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
   document.title = "Gezi Galerim — Sanal Galeri";
   const ototur = qs("#btn-ototur"); if (ototur) ototur.style.display = "none";
 
@@ -2279,25 +2394,22 @@ async function hubBaslat() {
   btnGir.textContent = "Salona Gir";
   btnGir.addEventListener("click", hubSesBaslat); // müzik ancak kullanıcı jestiyle
 
-  if (AKIS) {
-    // Sergiden çıkıp ana salona dönüldü: karşılama ekranı yok, yürüyüş sürer.
-    // Az geriden doğ ki çıkılan kapı hemen yeniden tetiklenmesin.
-    pObj.position.set(0, 1.7, -4.2);
-    hubSesBaslat();
-    akisBaslat();
-  }
-
   renderer.setAnimationLoop(() => {
     const dt = Math.min(saat.getDelta(), 0.05);
     zaman += dt;
     hareketGuncelle(dt);
+    turDonusGuncelle(dt);
     joyBakisGuncelle(dt);
     hedefGuncelle();
     hubGuncelle(dt);
+    sakuraGuncelle(dt);     // yüklü salonun parçacıkları
+    videowallGuncelle(dt);  // yüklü salonun sinevizyonu
     renderer.render(scene, camera);
   });
 
-  window.__galeri = { scene, renderer, camera, controls, HUB, kapilar, get hub() { return hub; }, zamanOku: () => zaman };
+  window.__galeri = { scene, renderer, camera, controls, HUB, kapilar, eserler,
+    get hub() { return hub; }, get salon() { return salon; }, get bolge() { return bolge; },
+    zamanOku: () => zaman };
 }
 
 // ---------- Başlat ----------
