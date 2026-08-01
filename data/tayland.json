@@ -1,0 +1,79 @@
+{
+  "baslik": "Tayland 2026",
+  "aciklama": "Tayland gezimizden kareler (yakında).",
+  "tema": "tayland",
+  "fotograflar": [
+    {
+      "id": "ty001",
+      "src": "assets/japonya/gp001.jpg",
+      "baslik": "Bangkok — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty002",
+      "src": "assets/japonya/gp002.jpg",
+      "baslik": "Chiang Mai — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty003",
+      "src": "assets/japonya/gp004.jpg",
+      "baslik": "Ayutthaya — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty004",
+      "src": "assets/japonya/gp005.jpg",
+      "baslik": "Phuket — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty005",
+      "src": "assets/japonya/gp006.jpg",
+      "baslik": "Krabi — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty006",
+      "src": "assets/japonya/gp007.jpg",
+      "baslik": "Chiang Rai — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty007",
+      "src": "assets/japonya/gp008.jpg",
+      "baslik": "Sukhothai — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty008",
+      "src": "assets/japonya/gp009.jpg",
+      "baslik": "Pattaya — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty009",
+      "src": "assets/japonya/gp010.jpg",
+      "baslik": "Koh Samui — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty010",
+      "src": "assets/japonya/gp011.jpg",
+      "baslik": "Kanchanaburi — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty011",
+      "src": "assets/japonya/gp012.jpg",
+      "baslik": "Hua Hin — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    },
+    {
+      "id": "ty012",
+      "src": "assets/japonya/gp013.jpg",
+      "baslik": "Phi Phi — Örnek",
+      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+    }
+  ]
+}

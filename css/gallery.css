@@ -195,6 +195,27 @@ kbd {
   background: var(--gold-soft);
 }
 
+/* Atrium kapısı nişangâhtayken beliren ipucu */
+.kapi-ipucu {
+  position: absolute;
+  top: calc(50% + 38px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: rgba(10, 8, 6, 0.6);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  color: var(--gold-soft);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.kapi-ipucu.gorunur { opacity: 1; }
+
 /* ===== Lightbox ===== */
 #lightbox { z-index: 60; }
 
