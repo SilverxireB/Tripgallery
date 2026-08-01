@@ -13,6 +13,18 @@ const NOT_ANAHTARI = `galeriNotlar:${GEZI}`;
 // Yayın modu: notlar salt okunur. Sahibi ?duzenle=1 ile düzenlemeyi açabilir.
 const DUZENLE = params.get("duzenle") === "1";
 
+// ---------- Gezi kayıt defteri (genişletilebilir) ----------
+// Lobi bir "hub"tır: her gezinin bir kapısı vardır. Açık gezinin kapısı
+// salona götürür; "yakinda" olanlar kapalı portal + tabela olarak durur.
+// Yeni gezi eklemek = buraya bir satır + data/<id>.json. Sıra, lobide
+// hangi duvara düşeceğini belirler (sol, sağ, arka).
+const GEZILER = [
+  { id: "japonya", ad: "Japonya", altbaslik: "2026",   renk: 0xbf2b25, durum: "acik" },
+  { id: "bali",    ad: "Bali",    altbaslik: "Yakında", renk: 0x1f8a70, durum: "yakinda" },
+  { id: "tayland", ad: "Tayland", altbaslik: "Yakında", renk: 0xd9a441, durum: "yakinda" },
+  { id: "misir",   ad: "Mısır",   altbaslik: "Yakında", renk: 0x2f7f9e, durum: "yakinda" },
+];
+
 // ---------- Tema sistemi ----------
 // Motor tek: temel salon deneyimi bütün gezilerde aynı kalır. Mekân
 // hissini veren dokunuşlar temadan gelir. Yeni bir gezi salonu açmak =
@@ -419,6 +431,28 @@ function kapiDokusuCiz(baslik) {
   return t;
 }
 
+function hubTabelaDokusu(ad, altbaslik, renk) {
+  // Lobideki gezi kapılarının üstündeki oyma tabela
+  const c = document.createElement("canvas");
+  c.width = 1024; c.height = 384;
+  const x = c.getContext("2d");
+  x.clearRect(0, 0, 1024, 384);
+  const hex = "#" + renk.toString(16).padStart(6, "0");
+  x.textAlign = "center";
+  x.fillStyle = "#f2ede4";
+  x.font = "600 150px Georgia, serif";
+  x.fillText((ad || "").toUpperCase(), 512, 170);
+  x.fillStyle = hex;
+  x.fillRect(392, 220, 240, 4);
+  x.font = "italic 300 52px Georgia, serif";
+  x.fillStyle = "#cdbf9c";
+  x.fillText((altbaslik || "").toUpperCase(), 512, 300);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // ---------- Hol kurulumu ----------
 const eserler = [];
 const plaketler = new Map();
@@ -630,6 +664,100 @@ function holKur(fotoSayisi, baslik, aciklama) {
   const lobiIsik = new THREE.PointLight(0xfff3e0, 25, 15);
   lobiIsik.position.set(0, H - 1, lobiZ);
   scene.add(lobiIsik);
+
+  // Zemin madalyonu: lobinin merkezinde ince oyma bir daire (hub kimliği)
+  const madalyonDoku = (() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 512;
+    const x = c.getContext("2d");
+    x.clearRect(0, 0, 512, 512);
+    x.strokeStyle = "rgba(201, 162, 39, 0.55)";
+    x.lineWidth = 6;
+    x.beginPath(); x.arc(256, 256, 236, 0, Math.PI * 2); x.stroke();
+    x.lineWidth = 2.5;
+    x.beginPath(); x.arc(256, 256, 210, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = "rgba(201, 162, 39, 0.32)";
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      x.beginPath();
+      x.moveTo(256 + Math.cos(a) * 210, 256 + Math.sin(a) * 210);
+      x.lineTo(256 + Math.cos(a) * 236, 256 + Math.sin(a) * 236);
+      x.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  })();
+  const madalyon = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.6, 4.6),
+    new THREE.MeshBasicMaterial({ map: madalyonDoku, transparent: true, depthWrite: false })
+  );
+  madalyon.rotation.x = -Math.PI / 2;
+  madalyon.position.set(0, 0.02, lobiZ);
+  scene.add(madalyon);
+
+  // --- Hub kapıları: lobinin sol/sağ/arka duvarında "yakında" geziler ---
+  // Açık gezi (Japonya) zaten öndeki salon kapısıdır; kalan geziler burada
+  // kapalı portal + tabela olarak durur. Yeni gezi eklendikçe slot dolar.
+  const hubYuvalari = [
+    { x: -W / 2 + 0.06, z: lobiZ,           ry: Math.PI / 2 },  // sol duvar
+    { x:  W / 2 - 0.06, z: lobiZ,           ry: -Math.PI / 2 }, // sağ duvar
+    { x: 0,             z: L / 2 + lobiL - 0.06, ry: Math.PI }, // arka duvar
+  ];
+  const bekleyenler = GEZILER.filter((g) => g.durum === "yakinda");
+  bekleyenler.slice(0, hubYuvalari.length).forEach((gezi, i) => {
+    const yuva = hubYuvalari[i];
+    const grup = new THREE.Group();
+    const cerceveMat = new THREE.MeshStandardMaterial({ color: 0x241d15, roughness: 0.5, metalness: 0.2 });
+    const kanatMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.5, metalness: 0.1 });
+
+    // Kasa (iki dikme + lento)
+    for (const sx of [-1, 1]) {
+      const dikme = new THREE.Mesh(new THREE.BoxGeometry(0.16, 3.3, 0.18), cerceveMat);
+      dikme.position.set(sx * 1.25, 1.65, 0);
+      grup.add(dikme);
+    }
+    const lento = new THREE.Mesh(new THREE.BoxGeometry(2.66, 0.18, 0.18), cerceveMat);
+    lento.position.set(0, 3.24, 0);
+    grup.add(lento);
+
+    // Kapalı çift kanat (hafif vurgu tonu)
+    for (const sx of [-1, 1]) {
+      const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.16, 3.1, 0.07), kanatMat);
+      kanat.position.set(sx * 0.59, 1.62, 0.02);
+      grup.add(kanat);
+      const kol = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0xb08d3e, roughness: 0.25, metalness: 0.9 })
+      );
+      kol.position.set(-sx * 0.14, 1.55, 0.07);
+      grup.add(kol);
+    }
+
+    // Vurgu renkli eşik şeridi (gezinin kimlik rengi)
+    const seritMat = new THREE.MeshBasicMaterial({ color: gezi.renk });
+    const serit = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.09), seritMat);
+    serit.position.set(0, 0.1, 0.1);
+    grup.add(serit);
+
+    // Tabela
+    const tabela = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.5, 0.94),
+      new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(gezi.ad, gezi.altbaslik, gezi.renk), transparent: true })
+    );
+    tabela.position.set(0, 3.9, 0.02);
+    grup.add(tabela);
+
+    grup.position.set(yuva.x, 0, yuva.z);
+    grup.rotation.y = yuva.ry;
+    scene.add(grup);
+
+    // Kapının üstüne gezinin kimlik renginde yumuşak vurgu ışığı
+    const vurgu = new THREE.PointLight(gezi.renk, 6, 6, 2);
+    vurgu.position.set(yuva.x - Math.sin(yuva.ry) * 1.2, 3.6, yuva.z + Math.cos(yuva.ry) * 1.2);
+    scene.add(vurgu);
+  });
 
   // --- Kapı etrafındaki ayırıcı duvar (Lobi ile Galeri arası) ---
   // Kapı boşluğu 2.9 m sabittir; yan paneller hol genişliğine uyarlanır
