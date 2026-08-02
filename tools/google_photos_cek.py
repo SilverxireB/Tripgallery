@@ -3,10 +3,13 @@ Google Photos paylasilan album linkinden fotograf adreslerini cekip
 galeri manifestine (data/<gezi>.json) doldurur.
 
 Kullanim:
-    python tools/google_photos_cek.py <album_linki> <gezi_adi> ["Galeri Basligi"]
+    python tools/google_photos_cek.py <album_linki> <gezi_adi> ["Galeri Basligi"] [adet]
 
 Ornek:
     python tools/google_photos_cek.py https://photos.app.goo.gl/XXXX japonya "Japonya 2026"
+    python tools/google_photos_cek.py https://photos.app.goo.gl/YYYY tayland "Tayland 2026" 20
+
+Son parametre (adet) verilirse albumden yalnizca ilk N fotograf alinir.
 
 Notlar:
 - Album "link ile paylasilan" (herkese acik link) olmali.
@@ -59,6 +62,7 @@ def main() -> None:
 
     url, gezi = sys.argv[1], sys.argv[2]
     baslik = sys.argv[3] if len(sys.argv) > 3 else gezi.title()
+    adet = int(sys.argv[4]) if len(sys.argv) > 4 else 0  # 0 = tumu
 
     print(f"Album cekiliyor: {url}")
     adresler = album_fotolari(url)
@@ -67,6 +71,9 @@ def main() -> None:
         print("oldugundan emin ol (photos.app.goo.gl/... veya photos.google.com/share/...).")
         sys.exit(2)
     print(f"{len(adresler)} fotograf bulundu.")
+    if adet > 0:
+        adresler = adresler[:adet]
+        print(f"Ilk {len(adresler)} fotograf alinacak.")
 
     manifest_yolu = KOK / "data" / f"{gezi}.json"
     if manifest_yolu.exists():
@@ -75,6 +82,17 @@ def main() -> None:
         veri = {"baslik": baslik, "aciklama": "", "fotograflar": []}
 
     veri["albumLink"] = url
+    veri.setdefault("tema", gezi)  # salon dekoru/parcaciklari bu ada gore secilir
+
+    # Baska bir geziden kopyalanmis yer tutucular varsa temizle: gercek
+    # fotograflar gelince onlarin kalmasi karisikliga yol aciyor.
+    onceki = len(veri["fotograflar"])
+    veri["fotograflar"] = [
+        f for f in veri["fotograflar"] if f.get("src", "").startswith(f"assets/{gezi}/")
+    ]
+    if onceki != len(veri["fotograflar"]):
+        print(f"{onceki - len(veri['fotograflar'])} yer tutucu kayit temizlendi.")
+
     mevcut = {f.get("kaynak", "") for f in veri["fotograflar"]}
 
     foto_klasoru = KOK / "assets" / gezi
