@@ -1238,12 +1238,13 @@ function parcacikKur({ W, L, H }) {
   const cicek = TEMA.parcaciklar === "plumeria";
   const parcaDoku = parcacikDokusu();
   const adet = yukselen ? Math.min(70, Math.floor(L * 0.9))
-             : toz ? Math.min(900, Math.floor(L * 18))
+             : toz ? Math.min(1500, Math.floor(L * 32))
              : cicek ? Math.min(280, Math.floor(L * 4))
              : Math.min(1200, Math.floor(L * 10));
-  // Toz zerresi tek başına görünmüyordu: 5 cm'lik nokta, üstelik yalnızca
-  // 200 tane. Fırtına olması için hem çok daha kalabalık hem daha iri.
-  const boy = yukselen ? 0.32 : toz ? 0.16 : cicek ? 0.19 : 0.085;
+  // Kum zerresi TANE olmalı: iri olunca havada uçuşan pul gibi duruyor.
+  // Küçük ve kalabalık — fırtına hissi tek tek taneden değil yoğunluktan
+  // ve hepsinin aynı yöne akmasından geliyor.
+  const boy = yukselen ? 0.32 : toz ? 0.075 : cicek ? 0.19 : 0.085;
   const yaprakGeo = new THREE.PlaneGeometry(toz ? boy * 1.9 : boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
@@ -1272,7 +1273,9 @@ function parcacikKur({ W, L, H }) {
            : 0.12 + Math.random() * 0.22,             // düşüş hızı
       // Fırtınanın yatay sürüklenmesi: yalnızca tozda var, salon boyunca
       // eser. Hepsi aynı yöne gittiği için havada bir akış okunuyor.
-      ruzgar: toz ? 1.5 + Math.random() * 2.6 : 0,
+      // Yön KAPIYA doğru (+z): ziyaretçi içeri yürürken kum üstüne gelir,
+      // önünden kaçmaz. Fırtınanın içine giriyormuş gibi oluyor.
+      ruzgar: toz ? 2.2 + Math.random() * 3.4 : 0,
       sallanma: yukselen ? 0.15 + Math.random() * 0.25
               : cicek ? 0.2 + Math.random() * 0.3
               : toz ? 0.8 + Math.random() * 1.6
@@ -2257,11 +2260,12 @@ function sakuraGuncelle(dt) {
     }
 
     p.y -= p.dusme * dt;
-    // Kum fırtınası: zerreler salon boyunca aynı yöne sürüklenir. Salonun
-    // ucuna varan zerre öbür uçtan geri girer, akış hiç kesilmez.
+    // Kum fırtınası: zerreler salonun dibinden KAPIYA doğru sürüklenir,
+    // yani içeri yürüyen ziyaretçinin üstüne gelir. Kapıya varan zerre
+    // salonun dibinden geri girer, akış hiç kesilmez.
     if (p.ruzgar) {
-      p.z -= p.ruzgar * dt;
-      if (p.z < -(HOL.L / 2 - 1)) p.z = HOL.L / 2 - 1;
+      p.z += p.ruzgar * dt;
+      if (p.z > HOL.L / 2 - 1) p.z = -(HOL.L / 2 - 1);
     }
     if (p.y < 0.05) {
       // Yere inen parça düştüğü yerde kalır, birikintiye eklenir…
