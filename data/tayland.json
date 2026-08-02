@@ -1,79 +1,103 @@
 {
   "baslik": "Tayland 2026",
-  "aciklama": "Tayland gezimizden kareler (yakında).",
+  "aciklama": "Tayland gezimizden kareler.",
   "tema": "tayland",
   "fotograflar": [
     {
       "id": "ty001",
-      "src": "assets/japonya/gp001.jpg",
-      "baslik": "Bangkok — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty001.jpg",
+      "baslik": "Aslan yavrusuyla",
+      "not": ""
     },
     {
       "id": "ty002",
-      "src": "assets/japonya/gp002.jpg",
-      "baslik": "Chiang Mai — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty002.jpg",
+      "baslik": "Tayland — 2",
+      "not": ""
     },
     {
       "id": "ty003",
-      "src": "assets/japonya/gp004.jpg",
-      "baslik": "Ayutthaya — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty003.jpg",
+      "baslik": "Tayland — 3",
+      "not": ""
     },
     {
       "id": "ty004",
-      "src": "assets/japonya/gp005.jpg",
-      "baslik": "Phuket — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty004.jpg",
+      "baslik": "Sahildeki hindistancevizi tezgâhı",
+      "not": ""
     },
     {
       "id": "ty005",
-      "src": "assets/japonya/gp006.jpg",
-      "baslik": "Krabi — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty005.jpg",
+      "baslik": "Tayland — 5",
+      "not": ""
     },
     {
       "id": "ty006",
-      "src": "assets/japonya/gp007.jpg",
-      "baslik": "Chiang Rai — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty006.jpg",
+      "baslik": "Tayland — 6",
+      "not": ""
     },
     {
       "id": "ty007",
-      "src": "assets/japonya/gp008.jpg",
-      "baslik": "Sukhothai — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty007.jpg",
+      "baslik": "Tayland — 7",
+      "not": ""
     },
     {
       "id": "ty008",
-      "src": "assets/japonya/gp009.jpg",
-      "baslik": "Pattaya — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty008.jpg",
+      "baslik": "Bambu ormanında",
+      "not": ""
     },
     {
       "id": "ty009",
-      "src": "assets/japonya/gp010.jpg",
-      "baslik": "Koh Samui — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty009.jpg",
+      "baslik": "Tayland — 9",
+      "not": ""
     },
     {
       "id": "ty010",
-      "src": "assets/japonya/gp011.jpg",
-      "baslik": "Kanchanaburi — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty010.jpg",
+      "baslik": "Tayland — 10",
+      "not": ""
     },
     {
       "id": "ty011",
-      "src": "assets/japonya/gp012.jpg",
-      "baslik": "Hua Hin — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty011.jpg",
+      "baslik": "Palmiyenin altında",
+      "not": ""
     },
     {
       "id": "ty012",
-      "src": "assets/japonya/gp013.jpg",
-      "baslik": "Phi Phi — Örnek",
-      "not": "Yer tutucu görsel. Tayland kareleri eklenecek."
+      "src": "assets/tayland/ty012.jpg",
+      "baslik": "Tayland — 12",
+      "not": ""
+    },
+    {
+      "id": "ty013",
+      "src": "assets/tayland/ty013.jpg",
+      "baslik": "Tayland — 13",
+      "not": ""
+    },
+    {
+      "id": "ty014",
+      "src": "assets/tayland/ty014.jpg",
+      "baslik": "Tayland — 14",
+      "not": ""
+    },
+    {
+      "id": "ty015",
+      "src": "assets/tayland/ty015.jpg",
+      "baslik": "Tayland — 15",
+      "not": ""
+    },
+    {
+      "id": "ty016",
+      "src": "assets/tayland/ty016.jpg",
+      "baslik": "Tayland — 16",
+      "not": ""
     }
   ]
 }

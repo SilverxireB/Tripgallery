@@ -151,7 +151,32 @@ addEventListener("resize", () => {
 });
 
 // ---------- Prosedürel dokular ----------
+// Pahalı dokular (mermer, sıva) bir kez üretilir; her salon kurulumunda
+// yeniden çizmek 2-3 saniyelik donmaya yol açıyordu. Kopyalar aynı kaynağı
+// paylaşır: GPU'ya tek yükleme, ayrı repeat/offset. Kopyalar imha edilmez.
+const _dokuOnbellek = new Map();
+function onbellekliDoku(ad, uret) {
+  let temel = _dokuOnbellek.get(ad);
+  if (!temel) { temel = uret(); _dokuOnbellek.set(ad, temel); }
+  const kopya = temel.clone();
+  kopya.needsUpdate = true;
+  kopya.userData.paylasilanKaynak = true; // salonSok bunu imha etmez
+  return kopya;
+}
+
 function mermerZeminDokusu() {
+  return onbellekliDoku("mermer", mermerZeminDokusuUret);
+}
+
+function sivaDokusu() {
+  return onbellekliDoku("siva", sivaDokusuUret);
+}
+
+function cevizDokusu() {
+  return onbellekliDoku("ceviz", cevizDokusuUret);
+}
+
+function mermerZeminDokusuUret() {
   const c = document.createElement("canvas");
   c.width = c.height = 1024;
   const x = c.getContext("2d");
@@ -192,7 +217,7 @@ function mermerZeminDokusu() {
   return t;
 }
 
-function sivaDokusu() {
+function sivaDokusuUret() {
   const c = document.createElement("canvas");
   c.width = c.height = 512;
   const x = c.getContext("2d");
@@ -210,7 +235,7 @@ function sivaDokusu() {
   return t;
 }
 
-function cevizDokusu() {
+function cevizDokusuUret() {
   // Çerçeveler için koyu ceviz ahşap damarı
   const c = document.createElement("canvas");
   c.width = 512; c.height = 512;
@@ -549,9 +574,13 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   HOL = { W, L, H };
 
   // --- Zemin: ayna yansıması + üstüne yarı saydam cilalı taş ---
+  // Tek binada hub'ın aynası da sahnede: iki ayna her karede sahneyi ayrı
+  // ayrı render eder. Salonun aynası yarı çözünürlükte tutulur (görsel fark
+  // ihmal edilebilir, kare maliyeti dörtte bire iner).
+  const aynaBoyut = TEK_BINA ? 512 : 1024;
   const yansima = new Reflector(new THREE.PlaneGeometry(W, L), {
-    textureWidth: 1024,
-    textureHeight: 1024,
+    textureWidth: aynaBoyut,
+    textureHeight: aynaBoyut,
     color: 0x828282,
   });
   yansima.rotation.x = -Math.PI / 2;
@@ -1064,11 +1093,31 @@ function cerceveGeometrisi(w, h) {
   });
 }
 
-function tabloOlustur(foto, index, taraf, z, gercekSpot) {
+// Hazır olan eserler burada bekler; her karede yalnızca birkaçı sahneye
+// eklenir. Böylece 60+ fotoğrafın yüklenmesi tek karede yığılıp yürüyüşü
+// saniyelerce dondurmaz.
+const eserKuyrugu = [];
+const KARE_BASINA_ESER = 4;
+
+function eserKuyrugunuIsle() {
+  let adet = 0;
+  while (eserKuyrugu.length && adet < KARE_BASINA_ESER) {
+    const is = eserKuyrugu.shift();
+    if (TEK_BINA && is.jeton !== salonJeton) { is.doku.dispose(); continue; }
+    is.kur();
+    adet++;
+  }
+}
+
+function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
   const hedefGrup = EKLE; // doku asenkron gelir; o anki salon grubunu sabitle
   const jeton = salonJeton;
   dokuYukleyici.load(foto.src, (doku) => {
-    if (TEK_BINA && jeton !== salonJeton) { doku.dispose(); return; } // salon sökülmüş
+    if (TEK_BINA) { eserKuyrugu.push({ doku, jeton, kur: () => kurEser(doku) }); return; }
+    kurEser(doku);
+  }, undefined, () => { if (kayit) kayit.kalanEser--; });
+
+  function kurEser(doku) {
     doku.colorSpace = THREE.SRGBColorSpace;
     doku.anisotropy = MAKS_ANIZO;
 
@@ -1195,7 +1244,7 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot) {
     grup.position.set(taraf * (HOL.W / 2 - 0.02), 1.72, z);
     grup.rotation.y = taraf === -1 ? Math.PI / 2 : -Math.PI / 2;
     hedefGrup.add(grup);
-  });
+  }
 }
 
 // ---------- Gezinti durumu ----------
@@ -1285,12 +1334,13 @@ function videowallKur(fotograflar) {
   const ust = panelYap(-HOL.L / 2 + 0.037);
   videowall = { alt, ust, sira: 0, bekleme: 0, gecis: -1, yukleniyor: false,
                 fotograflar, gorunur: 0, ilkYuklendi: false };
+  const kayitVW = videowall; // asenkron geri çağrı için sabitle (global değişebilir)
   const jeton = salonJeton;
   dokuYukleyici.load(fotograflar[0].src, (doku) => {
     if (TEK_BINA && jeton !== salonJeton) { doku.dispose(); return; }
     alt.material.map = videowallKareDokusu(doku.image);
     alt.material.needsUpdate = true;
-    videowall.ilkYuklendi = true;
+    kayitVW.ilkYuklendi = true;
     doku.dispose(); // kaynak GPU dokusu gerekmez; canvas dokusunu kullanıyoruz
   });
 }
@@ -1505,6 +1555,7 @@ function hareketGuncelle(dt) {
     _v.x = THREE.MathUtils.clamp(_v.x, -yariW, yariW);
     if (_v.z > salon.L / 2) {           // ön açıklıktan çıkıldı -> hub'a dön
       bolge = "hub";
+      salon = null;
     } else {
       _v.z = Math.max(_v.z, -(salon.L / 2 - 0.9));  // sondaki sinevizyon duvarı
       // Ön açıklıkta kasa genişliği kadar daral (kapıdan geçiş hissi)
@@ -1528,21 +1579,21 @@ function hareketGuncelle(dt) {
     if (hub) {
       for (const k of hub.kapilar) {
         if (!k.acik || k.acilma < 0.45) continue;
-        const salonHazir = salon && salon.gezi === k.gezi.id;
+        const salonHazir = salonlar.has(k.gezi.id);
         const derinlik = salonHazir ? 1e4 : 3.0; // salon yüklüyse sınır yok
         if (Math.abs(k.cx) < 0.01) {            // ön/arka kapı: z ekseninde
           if (Math.abs(p.x) < 1.2) {
             if (k.cz < 0) minZ = k.cz - derinlik; else maksZ = k.cz + derinlik;
             const icerlek = k.cz < 0 ? k.cz - p.z : p.z - k.cz;
             if (icerlek > -0.4) koridorda = true;
-            if (salonHazir && icerlek > 0.5) bolge = "salon";
+            if (salonHazir && icerlek > 0.5) { salon = salonlar.get(k.gezi.id); bolge = "salon"; }
           }
         } else {                                 // sol/sağ kapı: x ekseninde
           if (Math.abs(p.z) < 1.2) {
             if (k.cx < 0) minX = k.cx - derinlik; else maksX = k.cx + derinlik;
             const icerlek = k.cx < 0 ? k.cx - p.x : p.x - k.cx;
             if (icerlek > -0.4) koridorda = true;
-            if (salonHazir && icerlek > 0.5) bolge = "salon";
+            if (salonHazir && icerlek > 0.5) { salon = salonlar.get(k.gezi.id); bolge = "salon"; }
           }
         }
       }
@@ -2200,53 +2251,26 @@ function hubKapisiInsa(cfg, yuva) {
 
 // ---------- Hub (giriş salonu): tüm gezilere açılan kapılar ----------
 let hub = null;
-// Tek bina: aynı anda tek salon yüklü tutulur. Ziyaretçi başka bir kapıya
-// yönelirse eskisi sökülür (bellek), yenisi kurulur.
-let salon = null;      // { gezi, grup, ry, kapi, L, W, H, veri }
-// Her salon inşasına bir jeton verilir. Salon sökülünce jeton degisir; geç
-// gelen doku yüklemeleri bunu görüp kendini imha eder (sızıntı önlenir).
-let salonJeton = 0;
-let bolge = "hub";     // "hub" | "salon"
+// Tek bina: TÜM sergiler açılışta bir kez kurulur ve öylece kalır. Kapıya
+// yaklaşınca kurma/sökme yok — bina baştan ayakta, ziyaretçi sadece dolaşır.
+const salonlar = new Map();   // gezi id -> { gezi, grup, ry, kapi, L, W, H, veri }
+let salon = null;             // içinde bulunulan salon (yoksa null)
+let salonJeton = 0;           // geç gelen dokular için (sökme artık yok, ama korunur)
+let bolge = "hub";            // "hub" | "salon"
 const _v = new THREE.Vector3();
-
-function salonSok() {
-  if (!salon) return;
-  salonJeton++; // yoldaki doku yüklemeleri artık geçersiz
-  // Önizleme koridorunu geri getir: yoksa kapının ardı boşlukta kalır
-  if (salon.kapi && salon.kapi.vestibul) salon.kapi.vestibul.visible = true;
-  const dokuImha = (t) => { if (t && !PAYLASILAN_DOKULAR.has(t)) t.dispose(); };
-  salon.grup.traverse((o) => {
-    if (o.isReflector) o.dispose?.(); // aynanın render hedefi de bırakılmalı
-    if (!o.isMesh) return;
-    o.geometry?.dispose?.();
-    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-    for (const m of mats) {
-      dokuImha(m.map);
-      m.dispose?.();
-    }
-  });
-  scene.remove(salon.grup);
-  eserler.length = 0;
-  plaketler.clear();
-  sakura = null;
-  videowall = null;
-  salon = null;
-}
 
 // Kapının arkasına o gezinin salonunu kurar. Salon grubu öyle yerleştirilir ki
 // salonun yerel z=+L/2 düzlemi (ön açıklığı) kapının dünya konumuna oturur.
 async function salonYukle(kapi) {
-  if (salon && salon.gezi === kapi.gezi.id) return true;
-  if (kapi.yukleniyor) return false;
+  const id = kapi.gezi.id;
+  if (salonlar.has(id) || kapi.yukleniyor) return true;
   kapi.yukleniyor = true;
   try {
-    const yanit = await fetch(`data/${kapi.gezi.id}.json`, { cache: "force-cache" });
+    const yanit = await fetch(`data/${id}.json`, { cache: "force-cache" });
     if (!yanit.ok) throw new Error(yanit.status);
     const veri = await yanit.json();
-    salonSok();     // aynı anda tek salon
-    salonJeton++;   // bu inşanın kendi jetonu (öncekiler geçersiz)
 
-    TEMA = TEMALAR[veri.tema] || TEMALAR[kapi.gezi.id] || TEMALAR.varsayilan;
+    TEMA = TEMALAR[veri.tema] || TEMALAR[id] || TEMALAR.varsayilan;
     const grup = new THREE.Group();
     scene.add(grup);
     EKLE = grup;                       // bundan sonraki inşa gruba gider
@@ -2254,12 +2278,16 @@ async function salonYukle(kapi) {
                        veri.fotograflar[0]?.src);
     const L = hol.L;
     const gercekSpot = veri.fotograflar.length <= 22;
+    const kayit = { gezi: id, grup, ry: kapi.ry, kapi, L, W: hol.W, H: hol.H, veri,
+                    sakura: null, videowall: null, kalanEser: veri.fotograflar.length };
     veri.fotograflar.forEach((foto, i) => {
       const taraf = i % 2 === 0 ? -1 : 1;
       const z = L / 2 - 6 - Math.floor(i / 2) * 3.7;
-      tabloOlustur(foto, i, taraf, z, gercekSpot);
+      tabloOlustur(foto, i, taraf, z, gercekSpot, kayit);
     });
     videowallKur(veri.fotograflar);
+    kayit.sakura = sakura;             // holKur'un kurduğu parçacıklar bu salonun
+    kayit.videowall = videowall;
     EKLE = scene;                      // hedefi geri al
 
     // Yerleştir: yerel (0,0,L/2) -> kapının dünya konumu
@@ -2268,13 +2296,39 @@ async function salonYukle(kapi) {
     grup.position.set(kapi.cx - Math.sin(ry) * (L / 2), 0, kapi.cz - Math.cos(ry) * (L / 2));
     grup.updateMatrixWorld(true);
 
-    salon = { gezi: kapi.gezi.id, grup, ry, kapi, L, W: hol.W, H: hol.H, veri };
-    if (kapi.vestibul) { kapi.vestibul.visible = false; } // önizleme koridoru gizlenir
+    salonlar.set(id, kayit);
+    if (kapi.vestibul) kapi.vestibul.visible = false; // artık gerçek salon var
     kapi.yukleniyor = false;
     return true;
   } catch {
     kapi.yukleniyor = false;
     return false;
+  }
+}
+
+// Kuyruktaki eserlerin tamamı sahneye eklenene kadar bekler.
+function kuyrukBosalsin() {
+  return new Promise((coz) => {
+    const bekle = () => (eserKuyrugu.length ? requestAnimationFrame(bekle) : coz());
+    requestAnimationFrame(bekle);
+  });
+}
+
+// Açılış: ilk sergi (Japonya) kurulur kurulmaz ziyaretçi içeri alınır;
+// kalan sergiler o dolaşırken arka planda kurulmayı sürdürür. Böylece
+// bekleme kısa kalır ama kapıya varıldığında her şey hazırdır.
+async function tumSalonlariKur(ilerleme) {
+  const acik = hub.kapilar.filter((k) => k.acik);
+  if (!acik.length) { if (ilerleme) ilerleme(null); return; }
+
+  if (ilerleme) ilerleme(acik[0].gezi.ad);
+  await salonYukle(acik[0]);
+  await kuyrukBosalsin();
+  if (ilerleme) ilerleme(null);          // giriş açılabilir
+
+  for (let i = 1; i < acik.length; i++) { // kalanlar arka planda
+    await salonYukle(acik[i]);
+    await kuyrukBosalsin();
   }
 }
 
@@ -2415,13 +2469,7 @@ function hubGuncelle(dt) {
     k.leaves.forEach((l) => { l.pivot.rotation.y = -l.sx * aci; });
     if (k.acik) {
       if (d < enYakinMes) { enYakinMes = d; enYakin = k; }
-      // Ziyaretçi kapıya yaklaşırken salon arka planda kurulur. Koridorda
-      // yürürken hazır olur; sınır kalkar ve yürüyüş salona kesintisiz sürer.
-      // Yalnızca hub'dayken ve kapıya belirgin biçimde yaklaşmışken yükle:
-      // salonun içindeyken ya da salonlar arasında gidip gelirken sökülüp
-      // yeniden kurulması görüntüyü savuruyordu.
-      if (gezintiAktif && bolge === "hub" && d < 5.5 &&
-          (!salon || salon.gezi !== k.gezi.id)) salonYukle(k);
+      // Salonlar açılışta kurulduğu için burada yükleme yok.
     }
   }
   hub.enYakin = enYakin;
@@ -2441,7 +2489,9 @@ async function hubBaslat() {
   hubKur();
   qs("#giris-eyebrow").textContent = "SANAL GALERİ";
   qs("#giris-baslik").textContent = "Gezi Galerim";
-  qs("#giris-aciklama").textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
+  qs("#giris-aciklama").textContent = "Sergiler hazırlanıyor…";
+  btnGir.disabled = true;
+  btnGir.textContent = "Hazırlanıyor…";
   document.title = "Gezi Galerim — Sanal Galeri";
   // Otomatik tur yalnızca bir serginin içindeyken anlamlı: hub'da gizli,
   // salona girince belirir (bolgeGorunum her karede günceller).
@@ -2451,8 +2501,6 @@ async function hubBaslat() {
   pObj.position.set(0, 1.7, 0);   // salonun tam merkezinde doğ
   pObj.rotation.set(0, 0, 0);      // ön kapıya (−Z) dönük
 
-  btnGir.disabled = false;
-  btnGir.textContent = "Salona Gir";
   btnGir.addEventListener("click", hubSesBaslat); // müzik ancak kullanıcı jestiyle
 
   renderer.setAnimationLoop(() => {
@@ -2464,14 +2512,31 @@ async function hubBaslat() {
     hedefGuncelle();
     hubGuncelle(dt);
     bolgeGorunum();
-    sakuraGuncelle(dt);     // yüklü salonun parçacıkları
-    videowallGuncelle(dt);  // yüklü salonun sinevizyonu
+    eserKuyrugunuIsle();   // eserleri kareye yayarak ekle (donma olmasin)
+    // Yalnızca içinde bulunulan salonun parçacık/sinevizyonu güncellenir:
+    // tüm salonlar kurulu olduğundan hepsini animasyonlamak boşuna maliyet.
+    sakura = salon ? salon.sakura : null;
+    videowall = salon ? salon.videowall : null;
+    if (salon) { HOL = { W: salon.W, L: salon.L, H: salon.H }; }
+    sakuraGuncelle(dt);
+    videowallGuncelle(dt);
     renderer.render(scene, camera);
   });
 
   window.__galeri = { scene, renderer, camera, controls, HUB, kapilar, eserler,
-    get hub() { return hub; }, get salon() { return salon; }, get bolge() { return bolge; },
-    zamanOku: () => zaman };
+    get hub() { return hub; }, get salon() { return salon; }, get salonlar() { return salonlar; },
+    get bolge() { return bolge; }, zamanOku: () => zaman };
+
+  // --- Binanın tamamını şimdi kur ---
+  // Ziyaretçi daha girmeden bütün sergiler ayağa kalkar; sonrasında kapıya
+  // yaklaşınca hiçbir yükleme/sökme olmaz, takılma yaşanmaz.
+  const aciklamaEl = qs("#giris-aciklama");
+  tumSalonlariKur((ad) => {
+    if (ad) { aciklamaEl.textContent = `${ad} sergisi hazırlanıyor…`; return; }
+    aciklamaEl.textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
+    btnGir.disabled = false;
+    btnGir.textContent = "Salona Gir";
+  });
 }
 
 // ---------- Başlat ----------
