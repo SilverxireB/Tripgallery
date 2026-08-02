@@ -1,0 +1,103 @@
+{
+  "baslik": "Bali 2026",
+  "aciklama": "Bali gezimizden kareler.",
+  "tema": "bali",
+  "fotograflar": [
+    {
+      "id": "bl001",
+      "src": "assets/bali/bl001.jpg",
+      "baslik": "Cennetin Kapıları",
+      "not": ""
+    },
+    {
+      "id": "bl002",
+      "src": "assets/bali/bl002.jpg",
+      "baslik": "Bali — 2",
+      "not": ""
+    },
+    {
+      "id": "bl003",
+      "src": "assets/bali/bl003.jpg",
+      "baslik": "Bali — 3",
+      "not": ""
+    },
+    {
+      "id": "bl004",
+      "src": "assets/bali/bl004.jpg",
+      "baslik": "Bali — 4",
+      "not": ""
+    },
+    {
+      "id": "bl005",
+      "src": "assets/bali/bl005.jpg",
+      "baslik": "Bali — 5",
+      "not": ""
+    },
+    {
+      "id": "bl006",
+      "src": "assets/bali/bl006.jpg",
+      "baslik": "Bali — 6",
+      "not": ""
+    },
+    {
+      "id": "bl007",
+      "src": "assets/bali/bl007.jpg",
+      "baslik": "Bali — 7",
+      "not": ""
+    },
+    {
+      "id": "bl008",
+      "src": "assets/bali/bl008.jpg",
+      "baslik": "Kutsal pınarın koyları",
+      "not": ""
+    },
+    {
+      "id": "bl009",
+      "src": "assets/bali/bl009.jpg",
+      "baslik": "Bali — 9",
+      "not": ""
+    },
+    {
+      "id": "bl010",
+      "src": "assets/bali/bl010.jpg",
+      "baslik": "Bali — 10",
+      "not": ""
+    },
+    {
+      "id": "bl011",
+      "src": "assets/bali/bl011.jpg",
+      "baslik": "Bali — 11",
+      "not": ""
+    },
+    {
+      "id": "bl012",
+      "src": "assets/bali/bl012.jpg",
+      "baslik": "Bali — 12",
+      "not": ""
+    },
+    {
+      "id": "bl013",
+      "src": "assets/bali/bl013.jpg",
+      "baslik": "Şelalede",
+      "not": ""
+    },
+    {
+      "id": "bl014",
+      "src": "assets/bali/bl014.jpg",
+      "baslik": "Bali — 14",
+      "not": ""
+    },
+    {
+      "id": "bl015",
+      "src": "assets/bali/bl015.jpg",
+      "baslik": "Bali — 15",
+      "not": ""
+    },
+    {
+      "id": "bl016",
+      "src": "assets/bali/bl016.jpg",
+      "baslik": "Bali — 16",
+      "not": ""
+    }
+  ]
+}

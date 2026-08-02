@@ -28,7 +28,7 @@ const GEZILER = [
   // muzik: kapıya yaklaşınca çalan parça. Tayland'ınki şimdilik yer tutucu.
   { id: "japonya", ad: "Japonya", altbaslik: "2026",   renk: 0xbf2b25, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
   { id: "tayland", ad: "Tayland", altbaslik: "2026",   renk: 0xd9a441, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
-  { id: "bali",    ad: "Bali",    altbaslik: "Yakında", renk: 0x1f8a70, durum: "yakinda" },
+  { id: "bali",    ad: "Bali",    altbaslik: "2026",    renk: 0x1f8a70, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
   { id: "misir",   ad: "Mısır",   altbaslik: "Yakında", renk: 0x2f7f9e, durum: "yakinda" },
 ];
 
@@ -1142,20 +1142,28 @@ function dekorKur({ W, L, H }) {
 
   // --- Tavandan sarkan tropikal yeşillik ---
   if (d.yesillik) {
+    // Sarkan sarmaşık: ince, farklı boylarda şeritler — düz yeşil levha
+    // gibi durmasın diye dar tutulur ve hafifçe eğilir.
     const yaprakMat = new THREE.MeshStandardMaterial({
-      color: 0x3f7d4a, roughness: 0.85, side: THREE.DoubleSide,
+      color: 0x3f7d4a, roughness: 0.9, side: THREE.DoubleSide,
     });
-    const yaprakGeo = new THREE.PlaneGeometry(0.22, 0.8);
-    for (let z = L / 2 - 8; z > -L / 2 + 6; z -= 7) {
+    const koyuMat = new THREE.MeshStandardMaterial({
+      color: 0x2f6238, roughness: 0.9, side: THREE.DoubleSide,
+    });
+    for (let z = L / 2 - 8; z > -L / 2 + 6; z -= 6) {
       for (const sx of [-1, 1]) {
         const g = new THREE.Group();
-        for (let i = 0; i < 5; i++) {
-          const y = new THREE.Mesh(yaprakGeo, yaprakMat);
-          y.position.set((Math.random() - 0.5) * 0.4, -0.4 - Math.random() * 0.5, (Math.random() - 0.5) * 0.3);
-          y.rotation.set(0.2 + Math.random() * 0.3, Math.random() * Math.PI, (Math.random() - 0.5) * 0.5);
+        for (let i = 0; i < 7; i++) {
+          const boy = 0.5 + Math.random() * 0.9;
+          const y = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.07 + Math.random() * 0.05, boy),
+            i % 2 ? koyuMat : yaprakMat
+          );
+          y.position.set((Math.random() - 0.5) * 0.5, -boy / 2 - 0.05, (Math.random() - 0.5) * 0.35);
+          y.rotation.set((Math.random() - 0.5) * 0.25, Math.random() * Math.PI, (Math.random() - 0.5) * 0.35);
           g.add(y);
         }
-        g.position.set(sx * (W / 2 - 0.5), H - 0.15, z);
+        g.position.set(sx * (W / 2 - 0.45), H - 0.12, z);
         ekle(g);
       }
     }
