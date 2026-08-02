@@ -974,7 +974,8 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc, suslemeyiErtele) {
   const W = 7.8, H = 5.2;
   // Hol, eser sayısına göre uzar: her esere 3.7 m + giriş/çıkış payı
   const L = Math.max(26, tarafBasina * 3.7 + 12);
-  HOL = { W, L, H };
+  // fotoSayisi otomatik turun durak listesini üretmek için saklanır
+  HOL = { W, L, H, fotoSayisi };
 
   // --- Zemin: cilalı taş ---
   // Ayna (Reflector) kaldırıldı: yürürken zeminde hayalet izler bırakıyordu
@@ -2021,13 +2022,59 @@ function kapiSesi(aciliyor) {
 
 // ---------- Hareket ----------
 const tuslar = new Set();
-addEventListener("keydown", (e) => tuslar.add(e.code));
+const YURUME_TUSLARI = new Set(["KeyW", "KeyA", "KeyS", "KeyD",
+  "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+addEventListener("keydown", (e) => {
+  tuslar.add(e.code);
+  // Tur sürerken yürümeye kalkan kullanıcı kontrolü geri istiyordur:
+  // düğmeyi aramak zorunda kalmasın, tur kendiliğinden bıraksın.
+  if (turModu && YURUME_TUSLARI.has(e.code)) turuDurdur();
+});
 addEventListener("keyup", (e) => tuslar.delete(e.code));
 
 const hiz = new THREE.Vector3();
 const saat = new THREE.Clock();
 let adimFazi = 0;
 let zaman = 0;
+
+// Turun yürüyüşü: sıradaki durağa doğru sabit tempoda git, varınca eserin
+// önünde bekle, süre dolunca bir sonrakine geç. Salon döndürülmüş olabilir,
+// bu yüzden hesap salonun YEREL uzayında yapılır.
+function turYuruyusGuncelle(dt, p) {
+  const durak = turHedef();
+  const b = turBaglami();
+  if (!durak || !b) { turuDurdur(); return; }
+
+  _v.set(p.x, p.y, p.z);
+  if (b.grup) b.grup.worldToLocal(_v);
+
+  if (turEvre === "bekle") {
+    turSayac -= dt;
+    if (turSayac <= 0) {
+      turSira = (turSira + 1) % turDuraklar.length;
+      turEvre = "git";
+    }
+    return; // beklerken yerinde durur, yalnızca bakış çalışır
+  }
+
+  const dx = durak.x - _v.x;
+  const dz = durak.z - _v.z;
+  const uzaklik = Math.hypot(dx, dz);
+  if (uzaklik < 0.08) {
+    _v.x = durak.x; _v.z = durak.z;
+    turEvre = "bekle";
+    turSayac = durak.sure;
+  } else {
+    // Son yarım metrede yavaşla: duraklara çarparak değil, süzülerek varılır
+    const tempo = TUR_HIZ * Math.min(1, 0.35 + uzaklik / 0.9);
+    const adim = Math.min(tempo * dt, uzaklik);
+    _v.x += (dx / uzaklik) * adim;
+    _v.z += (dz / uzaklik) * adim;
+  }
+
+  if (b.grup) b.grup.localToWorld(_v);
+  p.x = _v.x; p.z = _v.z;
+}
 
 function hareketGuncelle(dt) {
   if (gezintiAktif && !turModu) {
@@ -2051,11 +2098,8 @@ function hareketGuncelle(dt) {
     hiz.z += yon.z * ivme * dt;
   }
 
-  // Tur modu: hol boyunca tek ve sabit tempoda, iki uç arasında mekik.
-  // (Eser önünde yavaşlayıp arada hızlanma denendi; keyifli bulunmadı.)
   if (turModu && gezintiAktif) {
-    hiz.x = 0;
-    hiz.z = 1.15 * turYon; // turYon -1: salonun sonuna, +1: kapıya dönüş
+    hiz.set(0, 0, 0); // tur kendi yürüyüşünü sürer, serbest ivme birikmesin
   }
 
   hiz.multiplyScalar(Math.max(1 - 8 * dt, 0));
@@ -2063,29 +2107,10 @@ function hareketGuncelle(dt) {
   const p = controls.getObject().position;
   const oncekiZ = p.z;
 
-  controls.moveRight(hiz.x * dt);
   if (turModu && gezintiAktif) {
-    // Tur, bakış yönünden bağımsız SALON EKSENİNDE ilerler: eserlere dönüp
-    // bakmak yürüyüşü duvara saptırıp durdurmaz. Salon döndürülmüş olabilir,
-    // bu yüzden ilerleme salonun yerel z ekseni boyunca uygulanır.
-    if (TEK_BINA && salon) {
-      _v.set(p.x, p.y, p.z);
-      salon.grup.worldToLocal(_v);
-      _v.z += hiz.z * dt;
-      _v.x = THREE.MathUtils.damp(_v.x, 0, 1.5, dt);
-      if (turYon < 0 && _v.z <= -(salon.L / 2 - 1.6)) turCevir(1);
-      else if (turYon > 0 && _v.z >= salon.L / 2 - 4.6) turCevir(-1);
-      salon.grup.localToWorld(_v);
-      p.x = _v.x; p.z = _v.z;
-    } else {
-      p.z += hiz.z * dt;
-      p.x = THREE.MathUtils.damp(p.x, 0, 1.5, dt); // yumuşakça orta hatta süzül
-      // Döngü: iki uçta yön değiştir. Kapı tarafındaki dönüş noktası kapı
-      // sensörünün (4.2 m) dışında — kapı her turda açılıp kapanmasın.
-      if (turYon < 0 && p.z <= -(HOL.L / 2 - 1.6)) turCevir(1);
-      else if (turYon > 0 && p.z >= HOL.L / 2 - 4.6) turCevir(-1);
-    }
+    turYuruyusGuncelle(dt, p);
   } else {
+    controls.moveRight(hiz.x * dt);
     controls.moveForward(-hiz.z * dt);
   }
 
@@ -2352,7 +2377,7 @@ canvas.addEventListener("mousedown", (e) => {
 addEventListener("mousemove", (e) => {
   fareNDC.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   if (!surukleniyor) return;
-  turDonus = null; // kullanıcı bakınıyor: turun otomatik kamera dönüşünü bırak
+  turElleBakis = zaman; // kullanıcı bakınıyor: tur kamerayı bir süre ona bıraksın
   const dx = e.clientX - sonFareX;
   const dy = e.clientY - sonFareY;
   surukleMesafe += Math.abs(dx) + Math.abs(dy);
@@ -2397,7 +2422,7 @@ canvas.addEventListener("touchstart", (e) => {
 
 addEventListener("touchmove", (e) => {
   if (dokunBakisId === null || !surukleniyor) return;
-  turDonus = null; // kullanıcı bakınıyor: turun otomatik kamera dönüşünü bırak
+  turElleBakis = zaman; // kullanıcı bakınıyor: tur kamerayı bir süre ona bıraksın
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
     if (t.identifier === dokunBakisId) {
@@ -2500,31 +2525,126 @@ if (joyZone) {
 }
 
 // ---------- Otomatik Tur Modu ----------
+// Tur artık orta hatta mekik dokumuyor. Rehberli bir gezi: bir duvarı
+// baştan sona eser eser dolaşır, her eserin önünde durup ona BAKAR,
+// salonun dibindeki sinevizyonu bir süre izler, sonra öbür duvarı geri
+// dönerek bitirir ve baştan başlar. Sebebi basit: kullanıcının aynı anda
+// hem yürüyüşü hem bakışı yönetmesi zor, o telaşta eserlere bakamıyordu.
 let turModu = false;
-let turYon = -1;     // -1: salonun sonuna doğru, +1: kapıya dönüş
-let turDonus = null; // uçlarda kamerayı yürüyüş yönüne çeviren animasyon
+let turDuraklar = [];      // {x, z, bx, by, bz, sure} — salonun YEREL uzayında
+let turSira = 0;
+let turEvre = "git";       // "git" (durağa yürü) | "bekle" (esere bak)
+let turSayac = 0;
+let turElleBakis = -99;    // kullanıcı en son ne zaman kendi baktı
 
-// Uçta yön değiştir ve kamerayı ~2.4 sn'de yeni yöne yumuşakça döndür
-function turCevir(yon) {
-  turYon = yon;
+const TUR_HIZ = 1.15;          // duraklar arası yürüyüş hızı (m/sn)
+const TUR_ESER_SURE = 4.5;     // her eserin önünde bekleme (sn)
+const TUR_FILM_SURE = 14;      // sinevizyonun önünde bekleme (sn)
+const TUR_ELLE_PAY = 2.5;      // kullanıcı baktıktan sonra kameranın geri
+                               // devralması için geçmesi gereken süre (sn)
+
+// Duraklar eser yerleşiminin AYNI formülünden üretilir (bkz. tabloOlustur):
+// çift indisli eser sol duvarda, tek indisli sağda; ikisi de aynı z'de.
+function turDuraklariUret(fotoSayisi, W, L, H) {
+  const duraklar = [];
+  const duvarX = W / 2 - 0.02;          // eserin asılı olduğu düzlem
+  const durusX = W / 2 - 2.55;          // eserden ~2.5 m geride durulur
+  const esereZ = (i) => L / 2 - 6 - Math.floor(i / 2) * 3.7;
+
+  const eserDurak = (i, taraf) => ({
+    x: taraf * durusX, z: esereZ(i),
+    bx: taraf * duvarX, by: 1.72, bz: esereZ(i),
+    sure: TUR_ESER_SURE,
+  });
+
+  // 1) Sol duvar: girişten salonun dibine
+  for (let i = 0; i < fotoSayisi; i += 2) duraklar.push(eserDurak(i, -1));
+  // 2) Dipteki sinevizyon: biraz geriden, uzun uzun izlenir
+  duraklar.push({
+    x: 0, z: -L / 2 + 7.5,
+    bx: 0, by: H * 0.52, bz: -L / 2,
+    sure: TUR_FILM_SURE,
+  });
+  // 3) Sağ duvar: dipten girişe doğru geri dönerek
+  for (let i = (fotoSayisi % 2 ? fotoSayisi - 2 : fotoSayisi - 1); i >= 1; i -= 2) {
+    duraklar.push(eserDurak(i, 1));
+  }
+  return duraklar;
+}
+
+// Turun üzerinde çalıştığı salonun ölçüleri + eser sayısı
+function turBaglami() {
+  if (TEK_BINA) {
+    if (!salon) return null;
+    return { grup: salon.grup, W: salon.W, L: salon.L, H: salon.H,
+             adet: salon.veri.fotograflar.length };
+  }
+  if (!HOL.fotoSayisi) return null;
+  return { grup: null, W: HOL.W, L: HOL.L, H: HOL.H, adet: HOL.fotoSayisi };
+}
+
+function turuBaslat() {
+  const b = turBaglami();
+  if (!b) return false;
+  turDuraklar = turDuraklariUret(b.adet, b.W, b.L, b.H);
+  if (!turDuraklar.length) return false;
+  // En yakın duraktan başla: ziyaretçi salonun neresindeyse oradan devam
+  // etsin, başa ışınlanmış gibi olmasın.
+  _v.set(controls.getObject().position.x, 0, controls.getObject().position.z);
+  if (b.grup) b.grup.worldToLocal(_v);
+  let enIyi = 0, enIyiMes = Infinity;
+  for (let i = 0; i < turDuraklar.length; i++) {
+    const d = turDuraklar[i];
+    const m = (d.x - _v.x) ** 2 + (d.z - _v.z) ** 2;
+    if (m < enIyiMes) { enIyiMes = m; enIyi = i; }
+  }
+  turSira = enIyi;
+  turEvre = "git";
+  turSayac = 0;
+  turElleBakis = -99;
+  turModu = true;
+  return true;
+}
+
+// Turun bu karedeki hedefi: nereye yürünecek, nereye bakılacak
+function turHedef() {
+  if (!turModu || !turDuraklar.length) return null;
+  return turDuraklar[Math.min(turSira, turDuraklar.length - 1)];
+}
+
+// Kamerayı durağın gösterdiği esere yumuşakça çevirir. Kullanıcı elle
+// bakındıysa birkaç saniye ona bırakır, sonra usulca geri devralır.
+function turBakisGuncelle(dt) {
+  if (!turModu || !gezintiAktif) return;
+  if (zaman - turElleBakis < TUR_ELLE_PAY) return;
+  const durak = turHedef();
+  if (!durak) return;
+  const b = turBaglami();
+  if (!b) return;
+
+  _v.set(durak.bx, durak.by, durak.bz);
+  if (b.grup) b.grup.localToWorld(_v);
+  const goz = controls.getObject().position;
+  const dx = _v.x - goz.x, dy = _v.y - goz.y, dz = _v.z - goz.z;
+  const yatay = Math.hypot(dx, dz);
+  if (yatay < 0.05) return;
+  const hedefY = Math.atan2(-dx, -dz);   // kamera -Z'ye bakar
+  const hedefX = Math.atan2(dy, yatay);
+
   bakis.setFromQuaternion(camera.quaternion);
-  turDonus = { bas: bakis.y, hedef: yon < 0 ? 0 : Math.PI, t: 0 };
-}
-
-function turDonusGuncelle(dt) {
-  if (!turDonus) return;
-  turDonus.t = Math.min(turDonus.t + dt / 2.4, 1);
-  const k = THREE.MathUtils.smoothstep(turDonus.t, 0, 1);
-  let fark = turDonus.hedef - turDonus.bas;
+  let fark = hedefY - bakis.y;
   fark = Math.atan2(Math.sin(fark), Math.cos(fark)); // en kısa yay
-  bakis.setFromQuaternion(camera.quaternion); // kullanıcının o anki eğimi korunur
-  bakis.y = turDonus.bas + fark * k;
+  // Durakta beklerken daha kararlı, yürürken daha yumuşak dön
+  const lambda = turEvre === "bekle" ? 3.2 : 2.0;
+  const k = 1 - Math.exp(-lambda * dt);
+  bakis.y += fark * k;
+  bakis.x += (hedefX - bakis.x) * k;
+  bakis.x = THREE.MathUtils.clamp(bakis.x, -1.4, 1.4);
   camera.quaternion.setFromEuler(bakis);
-  if (turDonus.t >= 1) turDonus = null;
 }
 
-// Kullanıcı fareyle bakınmaya başlarsa otomatik dönüşü ona bırak
-controls.addEventListener("change", () => { turDonus = null; });
+// Kullanıcı fareyle/joystickle bakınırsa kamerayı bir süre ona bırak
+controls.addEventListener("change", () => { turElleBakis = zaman; });
 
 // Tur sırasında joystick yürüyüşü değil BAKIŞI yönetir: kullanıcının eli
 // bakış değiştirmek için zaten joysticke gidiyor — tur kesilmez, kamera döner.
@@ -2532,7 +2652,7 @@ controls.addEventListener("change", () => { turDonus = null; });
 function joyBakisGuncelle(dt) {
   if (!turModu || !gezintiAktif || !joyAktif) return;
   if (joyX === 0 && joyY === 0) return;
-  turDonus = null; // kamerayı kullanıcı devraldı
+  turElleBakis = zaman; // kamerayı kullanıcı devraldı
   bakis.setFromQuaternion(camera.quaternion);
   bakis.y -= joyX * dt * 1.8;
   bakis.x -= joyY * dt * 1.2;
@@ -2542,21 +2662,24 @@ function joyBakisGuncelle(dt) {
 
 const btnOtotur = qs("#btn-ototur");
 
+function turDugmesiTazele() {
+  if (!btnOtotur) return;
+  btnOtotur.textContent = turModu ? "■ Turu Durdur" : "✦ Otomatik Tur";
+  btnOtotur.style.background = turModu ? "rgba(201, 162, 39, 0.35)" : "";
+}
+
 function turuDurdur() {
   turModu = false;
-  turDonus = null;
-  if (btnOtotur) {
-    btnOtotur.textContent = "✦ Otomatik Tur";
-    btnOtotur.style.background = "";
-  }
+  turDuraklar = [];
+  turDugmesiTazele();
 }
 
 if (btnOtotur) {
   btnOtotur.addEventListener("click", (e) => {
     e.stopPropagation();
-    turModu = !turModu;
-    btnOtotur.textContent = turModu ? "■ Turu Durdur" : "✦ Otomatik Tur";
-    btnOtotur.style.background = turModu ? "rgba(201, 162, 39, 0.35)" : "";
+    if (turModu) turuDurdur();
+    else turuBaslat();
+    turDugmesiTazele();
   });
 }
 
@@ -3266,7 +3389,7 @@ async function hubBaslat() {
     const dt = Math.min(saat.getDelta(), 0.05);
     zaman += dt;
     hareketGuncelle(dt);
-    turDonusGuncelle(dt);
+    turBakisGuncelle(dt);
     joyBakisGuncelle(dt);
     hedefGuncelle();
     hubGuncelle(dt);
@@ -3276,7 +3399,10 @@ async function hubBaslat() {
     // tüm salonlar kurulu olduğundan hepsini animasyonlamak boşuna maliyet.
     sakura = salon ? salon.sakura : null;
     videowall = salon ? salon.videowall : null;
-    if (salon) { HOL = { W: salon.W, L: salon.L, H: salon.H }; }
+    if (salon) {
+      HOL = { W: salon.W, L: salon.L, H: salon.H,
+              fotoSayisi: salon.veri.fotograflar.length };
+    }
     sakuraGuncelle(dt);
     videowallGuncelle(dt);
     renderer.render(scene, camera);
@@ -3284,7 +3410,13 @@ async function hubBaslat() {
 
   window.__galeri = { scene, renderer, camera, controls, HUB, kapilar, eserler,
     get hub() { return hub; }, get salon() { return salon; }, get salonlar() { return salonlar; },
-    get bolge() { return bolge; }, zamanOku: () => zaman };
+    get bolge() { return bolge; }, zamanOku: () => zaman,
+    turBaslat: () => turuBaslat(), turDurdur: () => turuDurdur(),
+    get turDurum() {
+      return { acik: turModu, sira: turSira, evre: turEvre,
+               sayac: +turSayac.toFixed(2), durakAdedi: turDuraklar.length,
+               durak: turDuraklar[turSira] || null, duraklar: turDuraklar };
+    } };
 
   // --- Binanın tamamını şimdi kur ---
   // Ziyaretçi daha girmeden bütün sergiler ayağa kalkar; sonrasında kapıya
@@ -3414,7 +3546,7 @@ async function baslat() {
     }
 
     hareketGuncelle(dt);
-    turDonusGuncelle(dt);
+    turBakisGuncelle(dt);
     joyBakisGuncelle(dt);
     hedefGuncelle();
     sakuraGuncelle(dt);
