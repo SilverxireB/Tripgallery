@@ -564,21 +564,26 @@ function kapiDokusuCiz(baslik) {
 }
 
 function hubTabelaDokusu(ad, altbaslik, renk) {
-  // Lobideki gezi kapılarının üstündeki oyma tabela
+  // Kapının üstündeki tabela: yalnızca ülke adı. Açık renkli duvarda
+  // okunması için koyu, sıcak bir ton + ince altın alt çizgi kullanılır.
   const c = document.createElement("canvas");
   c.width = 1024; c.height = 384;
   const x = c.getContext("2d");
   x.clearRect(0, 0, 1024, 384);
   const hex = "#" + renk.toString(16).padStart(6, "0");
   x.textAlign = "center";
-  x.fillStyle = "#f2ede4";
-  x.font = "600 150px Georgia, serif";
-  x.fillText((ad || "").toUpperCase(), 512, 170);
+  x.font = "600 168px Georgia, serif";
+  x.fillStyle = "rgba(24, 18, 10, 0.30)";           // yumuşak gölge: her zeminde okunur
+  x.fillText((ad || "").toUpperCase(), 516, 196);
+  x.fillStyle = "#2a2118";                           // koyu ceviz
+  x.fillText((ad || "").toUpperCase(), 512, 192);
   x.fillStyle = hex;
-  x.fillRect(392, 220, 240, 4);
-  x.font = "italic 300 52px Georgia, serif";
-  x.fillStyle = "#cdbf9c";
-  x.fillText((altbaslik || "").toUpperCase(), 512, 300);
+  x.fillRect(372, 236, 280, 6);
+  if (altbaslik) {                                   // yalnızca "Yakında" gibi durum notu
+    x.font = "italic 300 54px Georgia, serif";
+    x.fillStyle = "#6b5c42";
+    x.fillText(altbaslik.toUpperCase(), 512, 318);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
@@ -1138,41 +1143,44 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
           depthWrite: false,
         })
       );
-      golPlane.position.set(0, 0.45, 0.004);
+      golPlane.position.set(0, 0.45, 0.002);
       grup.add(golPlane);
     }
 
     // Ceviz çerçeve. Not: eskiden her eser için ayrı ExtrudeGeometry
     // üretiliyordu (şekil üçgenleştirme) — kurulum maliyetinin en büyük
     // kalemiydi. Tek kutu profil, izleme mesafesinde neredeyse aynı görünür.
+    // ÖNEMLİ: katmanlar birbirinden en az 5 mm ayrı durmalı. Kutu çerçevenin
+    // ön yüzü ile paspartu tam aynı düzleme denk geldiğinde yürürken
+    // titreşen ("ışıklanan") z-fighting oluşuyordu.
     const cerceve = new THREE.Mesh(
       new THREE.BoxGeometry(w + 0.19, h + 0.19, 0.07),
       new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.32, metalness: 0.15 })
     );
-    cerceve.position.z = 0.012;
+    cerceve.position.z = 0;          // ön yüz: 0.035
     grup.add(cerceve);
 
-    // İç pervaz: altın varak şeridi
-    const varak = new THREE.Mesh(
-      new THREE.BoxGeometry(w + 0.05, h + 0.05, 0.05),
-      new THREE.MeshStandardMaterial({ color: 0xa8843c, roughness: 0.25, metalness: 0.9 })
-    );
-    varak.position.z = 0.02;
-    grup.add(varak);
-
-    // Paspartu + pah çizgisi (kesik kenar hissi)
+    // Paspartu (krem kart)
     const paspartu = new THREE.Mesh(
-      new THREE.PlaneGeometry(w + 0.07, h + 0.07),
+      new THREE.PlaneGeometry(w + 0.10, h + 0.10),
       new THREE.MeshStandardMaterial({ color: 0xf3eee2, roughness: 0.95 })
     );
-    paspartu.position.z = 0.047;
+    paspartu.position.z = 0.042;
     grup.add(paspartu);
+
+    // İç pervaz: ince altın varak şeridi (paspartu ile fotoğraf arasında)
+    const varak = new THREE.Mesh(
+      new THREE.PlaneGeometry(w + 0.035, h + 0.035),
+      new THREE.MeshStandardMaterial({ color: 0xa8843c, roughness: 0.25, metalness: 0.9 })
+    );
+    varak.position.z = 0.047;
+    grup.add(varak);
 
     // Fotoğraf
     const fotoMat = new THREE.MeshBasicMaterial({ map: doku });
     fotoMat.toneMapped = false;
     const fotoMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), fotoMat);
-    fotoMesh.position.z = 0.049;
+    fotoMesh.position.z = 0.052;
     fotoMesh.userData = { index, foto };
     grup.add(fotoMesh);
     eserler.push(fotoMesh);
@@ -2303,11 +2311,11 @@ function hubKapisiInsa(cfg, yuva) {
   const vestibul = cfg.acik ? vestibulKur(grup, cfg) : null;
   // Tabela kültürel geçidin ÖNÜNDE ve ÜSTÜNDE durur: geçit eklendikten
   // sonra kirişin arkasında kalıp okunmuyordu.
-  const tabela = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.1),
+  const tabela = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.98),
     new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk),
                                   transparent: true, depthTest: false }));
   tabela.renderOrder = 5;
-  tabela.position.set(0, 5.35, 0.95);
+  tabela.position.set(0, 3.92, 0.3);   // geçidin kirişi ile kapı kasası arası
   grup.add(tabela);
   if (cfg.gezi) {
     const gecit = kapiGecidi(cfg.gezi);
@@ -2508,7 +2516,7 @@ function hubKur() {
     const acik = gezi.durum === "acik";
     const rec = hubKapisiInsa(
       { ad: gezi.ad, renk: gezi.renk, acik, gezi: acik ? gezi.id : null,
-        hedef: acik ? `?gezi=${gezi.id}` : null, altbaslik: acik ? "Sergiye gir →" : gezi.altbaslik },
+        hedef: acik ? `?gezi=${gezi.id}` : null, altbaslik: acik ? "" : gezi.altbaslik },
       yuvalar[i]
     );
     rec.gezi = gezi;
