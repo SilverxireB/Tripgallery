@@ -2215,7 +2215,6 @@ function kapiGecidi(geziId) {
   if (geziId === "japonya") {
     // Vermilion torii: kapı açıklığını (2.9 m) çerçeveleyecek ölçüde
     const kirmizi = new THREE.MeshStandardMaterial({ color: 0xbf2b25, roughness: 0.55, metalness: 0.05 });
-    const siyah = new THREE.MeshStandardMaterial({ color: 0x18140f, roughness: 0.5 });
     for (const sx of [-1, 1]) {
       const hashira = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 4.3, 16), kirmizi);
       hashira.position.set(sx * 2.15, 2.15, 0);
@@ -2233,12 +2232,11 @@ function kapiGecidi(geziId) {
     const shimaki = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.14, 0.32), kirmizi);
     shimaki.position.set(0, 4.14, 0);
     g.add(shimaki);
+    // Bağ kirişi biraz aşağıda: üstündeki boşluk sergi tabelasına kalsın.
+    // (Ortadaki gakuzuka levhası kaldırıldı — tabelanın önüne geliyordu.)
     const nuki = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.18, 0.24), kirmizi);
-    nuki.position.set(0, 3.42, 0);
+    nuki.position.set(0, 3.30, 0);
     g.add(nuki);
-    const gaku = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.66, 0.09), siyah);
-    gaku.position.set(0, 3.84, 0.16);
-    g.add(gaku);
   } else if (geziId === "tayland") {
     // Altın tapınak geçidi: sivri prang siluetli
     const altin = new THREE.MeshStandardMaterial({ color: 0xd9a441, roughness: 0.32, metalness: 0.85 });
@@ -2315,7 +2313,7 @@ function hubKapisiInsa(cfg, yuva) {
     new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk),
                                   transparent: true, depthTest: false }));
   tabela.renderOrder = 5;
-  tabela.position.set(0, 3.92, 0.3);   // geçidin kirişi ile kapı kasası arası
+  tabela.position.set(0, 3.74, 0.68);  // kapının hemen üstü, geçidin de önünde
   grup.add(tabela);
   if (cfg.gezi) {
     const gecit = kapiGecidi(cfg.gezi);
