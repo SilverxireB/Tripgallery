@@ -56,9 +56,9 @@ const TEMALAR = {
     dekor: { tasFener: true, chochin: true },
   },
   tayland: {
-    // Tayland'ın hikâyesi çiçek yağmuru değil: havada parçacık yok.
-    // Kimliği altın tapınak geçidi (kapıda) ve sıcak altın fanuslar veriyor.
-    parcaciklar: null,
+    // Tayland'ın imzası: Yi Peng gökyüzü fenerleri. Düşen çiçek değil,
+    // ağır ağır YÜKSELEN sıcak fanuslar; tavana yaklaşırken sönümlenir.
+    parcaciklar: "fener",
     isiklikDeseni: null,
     plaketMuhru: false,
     slogan: "— UZAK DİYARLARDAN ANILAR —",
@@ -326,9 +326,44 @@ function plumeriaDokusu() {
   return t;
 }
 
+function khomLoiDokusu() {
+  // Yi Peng gökyüzü feneri: içten aydınlanan sıcak altın fanus + halesi
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const x = c.getContext("2d");
+  // Dış hale
+  const hale = x.createRadialGradient(32, 34, 2, 32, 34, 31);
+  hale.addColorStop(0, "rgba(255, 214, 132, 0.95)");
+  hale.addColorStop(0.35, "rgba(255, 179, 84, 0.45)");
+  hale.addColorStop(1, "rgba(255, 150, 60, 0)");
+  x.fillStyle = hale;
+  x.fillRect(0, 0, 64, 64);
+  // Fanus gövdesi (hafif silindirik, altı dar)
+  const govde = x.createLinearGradient(0, 14, 0, 52);
+  govde.addColorStop(0, "#ffe9b0");
+  govde.addColorStop(0.5, "#ffcf72");
+  govde.addColorStop(1, "#ff9f3d");
+  x.fillStyle = govde;
+  x.beginPath();
+  x.moveTo(22, 16);
+  x.quadraticCurveTo(32, 12, 42, 16);
+  x.lineTo(40, 46);
+  x.quadraticCurveTo(32, 50, 24, 46);
+  x.closePath();
+  x.fill();
+  // Alt ağızdaki alev
+  x.fillStyle = "rgba(255, 246, 214, 0.9)";
+  x.beginPath(); x.ellipse(32, 47, 4, 3, 0, 0, Math.PI * 2); x.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // Temaya göre havada süzülen parçacık dokusu
 function parcacikDokusu() {
-  return TEMA.parcaciklar === "plumeria" ? plumeriaDokusu() : sakuraDokusu();
+  if (TEMA.parcaciklar === "fener") return khomLoiDokusu();
+  if (TEMA.parcaciklar === "plumeria") return plumeriaDokusu();
+  return sakuraDokusu();
 }
 
 function isikGoluDokusu() {
@@ -825,60 +860,65 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
   // kesintisiz yaprak halısına kalıyor.
 
-  // --- Havada süzülen parçacıklar (temaya bağlı: sakura / plumeria) ---
+  // --- Havada süzülen parçacıklar (temaya bağlı) ---
+  // İki davranış var: "düşen" (sakura — yere birikir) ve "yükselen"
+  // (khom loi fenerleri — tavana doğru süzülüp sönümlenir).
   if (TEMA.parcaciklar) {
+  const yukselen = TEMA.parcaciklar === "fener";
   const parcaDoku = parcacikDokusu();
-  const yaprakSayisi = Math.min(1200, Math.floor(L * 10));
-  const yaprakGeo = new THREE.PlaneGeometry(0.085, 0.085);
+  const adet = yukselen ? Math.min(220, Math.floor(L * 2.6)) : Math.min(1200, Math.floor(L * 10));
+  const boy = yukselen ? 0.46 : 0.085;
+  const yaprakGeo = new THREE.PlaneGeometry(boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
     transparent: true,
-    opacity: 0.92,
+    opacity: yukselen ? 1 : 0.92,
     depthWrite: false,
     side: THREE.DoubleSide,
+    blending: yukselen ? THREE.AdditiveBlending : THREE.NormalBlending, // fenerler ışıldasın
   });
-  const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, yaprakSayisi);
+  const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, adet);
   yapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  // InstancedMesh'in kapsama küresi tek yaprağın geometrisinden hesaplanır;
-  // origin görüş dışına çıkınca TÜM yapraklar birden yok oluyordu. Kapat.
+  // InstancedMesh'in kapsama küresi tek parçanın geometrisinden hesaplanır;
+  // origin görüş dışına çıkınca TÜMÜ birden yok oluyordu. Kapat.
   yapraklar.frustumCulled = false;
   const parcalar = [];
-  for (let i = 0; i < yaprakSayisi; i++) {
+  for (let i = 0; i < adet; i++) {
     parcalar.push({
       x: (Math.random() - 0.5) * W * 0.9,
       y: Math.random() * H,
       z: (Math.random() - 0.5) * (L - 2),
-      dusme: 0.12 + Math.random() * 0.22,     // düşüş hızı (m/sn)
-      sallanma: 0.4 + Math.random() * 0.7,    // yatay salınım genliği
+      dusme: yukselen ? 0.16 + Math.random() * 0.2   // yükseliş hızı (m/sn)
+                      : 0.12 + Math.random() * 0.22, // düşüş hızı
+      sallanma: yukselen ? 0.15 + Math.random() * 0.25 : 0.4 + Math.random() * 0.7,
       faz: Math.random() * Math.PI * 2,
-      donme: (Math.random() - 0.5) * 2.2,     // takla hızı
+      donme: yukselen ? (Math.random() - 0.5) * 0.25 : (Math.random() - 0.5) * 2.2,
       egim: Math.random() * Math.PI * 2,
     });
   }
   ekle(yapraklar);
 
-  // --- Yere düşen yaprakların biriktiği katman ---
-  // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
-  // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
-  // Kapasite dolunca en eski yaprağın yeri sessizce yeniden kullanılır.
-  const YERDE_KAPASITE = 24000;
-  const yerdeYapraklar = new THREE.InstancedMesh(
-    new THREE.PlaneGeometry(0.09, 0.09),
-    new THREE.MeshBasicMaterial({
-      map: parcaDoku,
-      transparent: true,
-      opacity: 0.85,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-    YERDE_KAPASITE
-  );
-  yerdeYapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  yerdeYapraklar.frustumCulled = false;
-  yerdeYapraklar.count = 0; // boş başlar, düşen her yaprakla artar
-  ekle(yerdeYapraklar);
+  let yerdeYapraklar = null;
+  if (!yukselen) {
+    // --- Yere düşen yaprakların biriktiği katman ---
+    // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
+    // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
+    const YERDE_KAPASITE = 24000;
+    yerdeYapraklar = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(0.09, 0.09),
+      new THREE.MeshBasicMaterial({
+        map: parcaDoku, transparent: true, opacity: 0.85,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+      YERDE_KAPASITE
+    );
+    yerdeYapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    yerdeYapraklar.frustumCulled = false;
+    yerdeYapraklar.count = 0; // boş başlar, düşen her yaprakla artar
+    ekle(yerdeYapraklar);
+  }
 
-  sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0 };
+  sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0, yukselen };
   }
 
   // --- Temaya özel kenar-köşe dekorasyonları ---
@@ -1677,9 +1717,38 @@ function yereBirak(p) {
 
 function sakuraGuncelle(dt) {
   if (!sakura) return;
-  const { mesh, parcalar } = sakura;
+  const { mesh, parcalar, yukselen } = sakura;
   for (let i = 0; i < parcalar.length; i++) {
     const p = parcalar[i];
+
+    if (yukselen) {
+      // Khom loi: ağır ağır yükselir, tavana yaklaşırken küçülüp söner ve
+      // aşağıdan yeni bir fener salınır. Yere birikme yok.
+      p.y += p.dusme * dt;
+      if (p.y > HOL.H - 0.15) {
+        p.y = 0.4 + Math.random() * 0.5;
+        p.x = (Math.random() - 0.5) * HOL.W * 0.85;
+        p.z = (Math.random() - 0.5) * (HOL.L - 3);
+        p.faz = Math.random() * Math.PI * 2;
+        p.dusme = 0.16 + Math.random() * 0.2;
+      }
+      // Doğarken büyü, tavana yaklaşırken küçül: yumuşak beliriş/kayboluş
+      const oran = p.y / Math.max(HOL.H, 0.001);
+      const olcek = Math.min(1, oran * 4) * Math.min(1, (1 - oran) * 3.2);
+      _yaprakOlcek.setScalar(Math.max(olcek, 0.001));
+      _yaprakPoz.set(
+        p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.28,
+        p.y,
+        p.z + Math.cos(zaman * p.sallanma * 0.7 + p.faz) * 0.22
+      );
+      // Fenerler dik durur, yalnızca hafifçe salınır (takla atmaz)
+      _yaprakDonus.set(0, Math.sin(zaman * 0.4 + p.faz) * 0.25, Math.sin(zaman * 0.5 + p.faz) * 0.09);
+      _yaprakQ.setFromEuler(_yaprakDonus);
+      _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
+      mesh.setMatrixAt(i, _yaprakMatrisi);
+      continue;
+    }
+
     p.y -= p.dusme * dt;
     if (p.y < 0.05) {
       // yere inen yaprak düştüğü yerde kalır, birikintiye eklenir…
@@ -1691,6 +1760,7 @@ function sakuraGuncelle(dt) {
       p.faz = Math.random() * Math.PI * 2;
       p.dusme = 0.12 + Math.random() * 0.22;
     }
+    _yaprakOlcek.setScalar(1);
     _yaprakPoz.set(
       p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
       p.y,
