@@ -441,8 +441,9 @@ function metniSar(ctx, text, maxW) {
 
 function plaketDokusuCiz(baslik, not) {
   const c = document.createElement("canvas");
-  c.width = 512; c.height = 320;
+  c.width = 384; c.height = 240;   // daha kucuk tuval: eser basina canvas maliyeti
   const x = c.getContext("2d");
+  x.scale(384 / 512, 240 / 320);   // cizim 512x320 tabanli, oranli kucult
   const g = x.createLinearGradient(0, 0, 0, 320);
   g.addColorStop(0, "#f5f0e6");
   g.addColorStop(1, "#e4dccb");
@@ -600,7 +601,7 @@ let HUB = null;            // atrium ölçüleri (holKur'da belirlenir)
 const kapilar = [];        // atrium gezi kapıları (nişangâh/tık hedefleri)
 let sakura = null; // havada süzülen kiraz çiçeği yaprakları
 
-function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
+function holKur(fotoSayisi, baslik, aciklama, arkaSrc, suslemeyiErtele) {
   const tarafBasina = Math.ceil(fotoSayisi / 2);
   // Döngülü tur orta hattan yürüdüğü için hol bir tık dar tutuldu:
   // eserler ~3.9 m bakış mesafesine gelir, plaketler yürürken okunur.
@@ -701,12 +702,6 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
       const pilastr = new THREE.Mesh(new THREE.BoxGeometry(0.14, H - 0.3, 0.55), pilastrMat);
       pilastr.position.set(taraf * (W / 2 - 0.07), (H - 0.3) / 2 + 0.02, z);
       ekle(pilastr);
-      // pilastr başlığı ve kaidesi
-      for (const [py, ph] of [[0.14, 0.22], [H - 0.42, 0.16]]) {
-        const trim = new THREE.Mesh(new THREE.BoxGeometry(0.2, ph, 0.68), pilastrMat);
-        trim.position.set(taraf * (W / 2 - 0.1), py, z);
-        ekle(trim);
-      }
     }
 
     // tavan kirişi (ışıklığın camekân çıtası gibi üzerinden geçer)
@@ -849,7 +844,25 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
   // kesintisiz yaprak halısına kalıyor.
 
-  // --- Havada süzülen parçacıklar (temaya bağlı) ---
+  // --- Süslemeler (parçacıklar + kenar-köşe dekoru) ---
+  // Ertelenebilir: önce fotoğraflar asılsın, ziyaretçi eserleri görsün;
+  // süslemeler hemen ardından gelir. Yükleme böyle daha anlamlı ilerler.
+  const susle = () => { parcacikKur({ W, L, H }); dekorKur({ W, L, H }); };
+  if (suslemeyiErtele) suslemeyiErtele.push(susle); else susle();
+
+  // --- Genel ışık ve atmosfer ---
+  // Tek bina modunda ortam ışığı ve sis hub tarafından bir kez kurulur;
+  // her salon kendi kopyasını eklerse sahne kat kat aydınlanır.
+  if (!TEK_BINA) {
+    ekle(new THREE.AmbientLight(0xfff4e0, 0.32));
+    ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
+    scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
+  }
+
+  return { W, L, H, tarafBasina, kanatlar };
+}
+
+function parcacikKur({ W, L, H }) {
   // İki davranış var: "düşen" (sakura — yere birikir) ve "yükselen"
   // (khom loi fenerleri — tavana doğru süzülüp sönümlenir).
   if (TEMA.parcaciklar) {
@@ -909,20 +922,6 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
 
   sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0, yukselen };
   }
-
-  // --- Temaya özel kenar-köşe dekorasyonları ---
-  dekorKur({ W, L, H });
-
-  // --- Genel ışık ve atmosfer ---
-  // Tek bina modunda ortam ışığı ve sis hub tarafından bir kez kurulur;
-  // her salon kendi kopyasını eklerse sahne kat kat aydınlanır.
-  if (!TEK_BINA) {
-    ekle(new THREE.AmbientLight(0xfff4e0, 0.32));
-    ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.35));
-    scene.fog = new THREE.Fog(0x151210, L * 0.55, L * 1.7);
-  }
-
-  return { W, L, H, tarafBasina, kanatlar };
 }
 
 // Salona mekân kimliğini veren dekorasyonlar. Tümü prosedürel (dosya yok)
@@ -995,17 +994,15 @@ function dekorKur({ W, L, H }) {
     const choMat = new THREE.MeshBasicMaterial({ map: chochinDokusu() }); // kendinden aydınlık
     const kapak = new THREE.MeshBasicMaterial({ color: 0x141414 });
     const ip = new THREE.MeshBasicMaterial({ color: 0x2a2a2a });
-    const govdeGeo = new THREE.SphereGeometry(0.2, 16, 12);
-    const ustGeo = new THREE.CylinderGeometry(0.085, 0.1, 0.05, 10);
-    const altGeo = new THREE.CylinderGeometry(0.06, 0.045, 0.05, 10);
-    const ipGeo = new THREE.CylinderGeometry(0.006, 0.006, 1.0, 6);
-    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 6.5) {
+    // Not: gövde + askı ipi yeterli (alt/üst kapaklar bu mesafede
+    // seçilmiyordu) ve aralık seyreltildi — çizim çağrısı dörtte bire indi.
+    const govdeGeo = new THREE.SphereGeometry(0.2, 14, 10);
+    const ipGeo = new THREE.CylinderGeometry(0.006, 0.006, 1.1, 5);
+    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 10) {
       for (const sx of [-1, 1]) {
         const g = new THREE.Group();
         const govde = new THREE.Mesh(govdeGeo, choMat); govde.scale.set(1, 1.35, 1); g.add(govde);
-        const ust = new THREE.Mesh(ustGeo, kapak); ust.position.y = 0.27; g.add(ust);
-        const alt = new THREE.Mesh(altGeo, kapak); alt.position.y = -0.28; g.add(alt);
-        const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.8; g.add(askı);
+        const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.82; g.add(askı);
         g.position.set(sx * 2.45, 4.0, z);
         ekle(g);
       }
@@ -1079,13 +1076,11 @@ function dekorKur({ W, L, H }) {
     const altGeo = new THREE.ConeGeometry(0.12, 0.22, 10);
     const ustGeo = new THREE.CylinderGeometry(0.06, 0.09, 0.06, 10);
     const ipGeo = new THREE.CylinderGeometry(0.006, 0.006, 1.0, 6);
-    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 6.5) {
+    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 10) {
       for (const sx of [-1, 1]) {
         const g = new THREE.Group();
         const govde = new THREE.Mesh(govdeGeo, altinMat); govde.scale.set(1, 1.15, 1); g.add(govde);
-        const alt = new THREE.Mesh(altGeo, altinMat); alt.position.y = -0.24; alt.rotation.x = Math.PI; g.add(alt);
-        const ust = new THREE.Mesh(ustGeo, kapak); ust.position.y = 0.23; g.add(ust);
-        const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.78; g.add(askı);
+        const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.8; g.add(askı);
         g.position.set(sx * 2.45, 4.0, z);
         ekle(g);
       }
@@ -1096,33 +1091,6 @@ function dekorKur({ W, L, H }) {
 // ---------- Tablo + çerçeve + plaket ----------
 const dokuYukleyici = new THREE.TextureLoader();
 dokuYukleyici.setCrossOrigin("anonymous");
-
-// Pahlı, kesitli çerçeve: iç boşluklu şekil + extrude
-function cerceveGeometrisi(w, h) {
-  const kalinlik = 0.095;
-  const dis = new THREE.Shape();
-  const W2 = w / 2 + kalinlik, H2 = h / 2 + kalinlik;
-  dis.moveTo(-W2, -H2);
-  dis.lineTo(W2, -H2);
-  dis.lineTo(W2, H2);
-  dis.lineTo(-W2, H2);
-  dis.closePath();
-  const ic = new THREE.Path();
-  const w2 = w / 2 + 0.012, h2 = h / 2 + 0.012;
-  ic.moveTo(-w2, -h2);
-  ic.lineTo(w2, -h2);
-  ic.lineTo(w2, h2);
-  ic.lineTo(-w2, h2);
-  ic.closePath();
-  dis.holes.push(ic);
-  return new THREE.ExtrudeGeometry(dis, {
-    depth: 0.045,
-    bevelEnabled: true,
-    bevelThickness: 0.022,
-    bevelSize: 0.016,
-    bevelSegments: 2,
-  });
-}
 
 // Hazır olan eserler burada bekler; her karede yalnızca birkaçı sahneye
 // eklenir. Böylece 60+ fotoğrafın yüklenmesi tek karede yığılıp yürüyüşü
@@ -1174,20 +1142,14 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
       grup.add(golPlane);
     }
 
-    // Sahte gölge: çerçevenin arkasında duvara vuran yumuşak leke
-    const golge = new THREE.Mesh(
-      new THREE.PlaneGeometry(w + 0.62, h + 0.62),
-      new THREE.MeshBasicMaterial({ map: golgeDoku, transparent: true, opacity: 0.65, depthWrite: false })
-    );
-    golge.position.set(0, -0.05, 0.006);
-    grup.add(golge);
-
-    // Kesitli ceviz çerçeve (pahlı extrude profil)
+    // Ceviz çerçeve. Not: eskiden her eser için ayrı ExtrudeGeometry
+    // üretiliyordu (şekil üçgenleştirme) — kurulum maliyetinin en büyük
+    // kalemiydi. Tek kutu profil, izleme mesafesinde neredeyse aynı görünür.
     const cerceve = new THREE.Mesh(
-      cerceveGeometrisi(w, h),
+      new THREE.BoxGeometry(w + 0.19, h + 0.19, 0.07),
       new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.32, metalness: 0.15 })
     );
-    cerceve.position.z = 0.008;
+    cerceve.position.z = 0.012;
     grup.add(cerceve);
 
     // İç pervaz: altın varak şeridi
@@ -1206,13 +1168,6 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     paspartu.position.z = 0.047;
     grup.add(paspartu);
 
-    const pah = new THREE.Mesh(
-      new THREE.PlaneGeometry(w + 0.016, h + 0.016),
-      new THREE.MeshBasicMaterial({ color: 0xd8cfb8 })
-    );
-    pah.position.z = 0.0475;
-    grup.add(pah);
-
     // Fotoğraf
     const fotoMat = new THREE.MeshBasicMaterial({ map: doku });
     fotoMat.toneMapped = false;
@@ -1221,20 +1176,6 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     fotoMesh.userData = { index, foto };
     grup.add(fotoMesh);
     eserler.push(fotoMesh);
-
-    // Cam yansıması
-    const cam = new THREE.Mesh(
-      new THREE.PlaneGeometry(w + 0.06, h + 0.06),
-      new THREE.MeshPhysicalMaterial({
-        transparent: true,
-        opacity: 0.07,
-        roughness: 0.04,
-        metalness: 0,
-        color: 0xffffff,
-      })
-    );
-    cam.position.z = 0.055;
-    grup.add(cam);
 
     // Plaket
     const plaket = new THREE.Mesh(
@@ -1245,7 +1186,10 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     grup.add(plaket);
     plaketler.set(foto.id, plaket);
 
-    // Görünür ray spot armatürü
+    // Görünür ray spot armatürü — yalnızca AZ eserli (gerçek spotlu)
+    // salonlarda. 60+ eserde 120+ ek çizim çağrısı demekti; tavandaki
+    // küçük armatürün katkısı o maliyeti hak etmiyor.
+    if (gercekSpot) {
     const armatur = new THREE.Group();
     const govde = new THREE.Mesh(
       new THREE.CylinderGeometry(0.05, 0.07, 0.22, 12),
@@ -1263,6 +1207,7 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     armatur.position.set(0, HOL.H - 1.7 - 0.25, 1.15);
     armatur.rotation.x = 0.7;
     grup.add(armatur);
+    }
 
     if (gercekSpot) {
       const spot = new THREE.SpotLight(0xffedd2, 16, 8, 0.5, 0.7, 1.7);
@@ -2409,20 +2354,30 @@ async function salonYukle(kapi) {
     const grup = new THREE.Group();
     scene.add(grup);
     EKLE = grup;                       // bundan sonraki inşa gruba gider
+
+    // 1) Mimari kabuk (duvar/zemin/tavan/ışık) — süslemeler ertelenir
+    const suslemeler = [];
     const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama,
-                       veri.fotograflar[0]?.src);
+                       veri.fotograflar[0]?.src, suslemeler);
     const L = hol.L;
     const gercekSpot = veri.fotograflar.length <= 22;
     const kayit = { gezi: id, grup, ry: kapi.ry, kapi, L, W: hol.W, H: hol.H, veri,
                     sakura: null, videowall: null, kalanEser: veri.fotograflar.length };
+
+    // 2) Fotoğraflar: asıl içerik önce gelsin
     veri.fotograflar.forEach((foto, i) => {
       const taraf = i % 2 === 0 ? -1 : 1;
       const z = L / 2 - 6 - Math.floor(i / 2) * 3.7;
       tabloOlustur(foto, i, taraf, z, gercekSpot, kayit);
     });
     videowallKur(veri.fotograflar);
-    kayit.sakura = sakura;             // holKur'un kurduğu parçacıklar bu salonun
     kayit.videowall = videowall;
+    await kuyrukBosalsin();            // tablolar asılana kadar
+
+    // 3) Süslemeler (parçacıklar, fenerler, taş fenerler…) en son
+    EKLE = grup;
+    suslemeler.forEach((f) => f());
+    kayit.sakura = sakura;
     EKLE = scene;                      // hedefi geri al
 
     // Yerleştir: yerel (0,0,L/2) -> kapının dünya konumu
