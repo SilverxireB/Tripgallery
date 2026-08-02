@@ -1,7 +1,6 @@
 // ===== Gezi Galerim — 3B sanal müze motoru (gerçekçi hol sürümü) =====
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
-import { Reflector } from "three/addons/objects/Reflector.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 
@@ -610,18 +609,10 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   const L = Math.max(26, tarafBasina * 3.7 + 12);
   HOL = { W, L, H };
 
-  // --- Zemin: ayna yansıması + üstüne yarı saydam cilalı taş ---
-  // Tek binada hub'ın aynası da sahnede: iki ayna her karede sahneyi ayrı
-  // ayrı render eder. Salonun aynası yarı çözünürlükte tutulur (görsel fark
-  // ihmal edilebilir, kare maliyeti dörtte bire iner).
-  const aynaBoyut = TEK_BINA ? 512 : 1024;
-  const yansima = new Reflector(new THREE.PlaneGeometry(W, L), {
-    textureWidth: aynaBoyut,
-    textureHeight: aynaBoyut,
-    color: 0x828282,
-  });
-  yansima.rotation.x = -Math.PI / 2;
-  ekle(yansima);
+  // --- Zemin: cilalı taş ---
+  // Ayna (Reflector) kaldırıldı: yürürken zeminde hayalet izler bırakıyordu
+  // ve her karede sahneyi bir kez daha render ediyordu. Parlaklık artık
+  // ortam haritasından geliyor — temiz ve çok daha hafif.
 
   const zeminDoku = mermerZeminDokusu();
   zeminDoku.repeat.set(W / 4, L / 4);
@@ -629,10 +620,8 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
     new THREE.PlaneGeometry(W, L),
     new THREE.MeshStandardMaterial({
       map: zeminDoku,
-      roughness: 0.36,
-      metalness: 0.04,
-      transparent: true,
-      opacity: 0.95,   // yansima yalnizca hafif bir ipucu kalsin (leke yapmasin)
+      roughness: 0.22,   // cilalı taş: ortam haritasından yumuşak parlama
+      metalness: 0.18,
     })
   );
   zemin.rotation.x = -Math.PI / 2;
@@ -866,13 +855,13 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   if (TEMA.parcaciklar) {
   const yukselen = TEMA.parcaciklar === "fener";
   const parcaDoku = parcacikDokusu();
-  const adet = yukselen ? Math.min(220, Math.floor(L * 2.6)) : Math.min(1200, Math.floor(L * 10));
-  const boy = yukselen ? 0.46 : 0.085;
+  const adet = yukselen ? Math.min(70, Math.floor(L * 0.9)) : Math.min(1200, Math.floor(L * 10));
+  const boy = yukselen ? 0.32 : 0.085;
   const yaprakGeo = new THREE.PlaneGeometry(boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
     transparent: true,
-    opacity: yukselen ? 1 : 0.92,
+    opacity: yukselen ? 0.5 : 0.92,   // fenerler dikkat çalmasın, arka planda kalsın
     depthWrite: false,
     side: THREE.DoubleSide,
     blending: yukselen ? THREE.AdditiveBlending : THREE.NormalBlending, // fenerler ışıldasın
@@ -2234,7 +2223,7 @@ function vestibulKur(anaGrup, cfg) {
 
   // Yan duvarlarda gezinin gerçek fotoğrafları (çerçeveli, aydınlatılmış)
   if (cfg.gezi) {
-    fetch(`data/${cfg.gezi}.json`, { cache: "force-cache" })
+    fetch(`data/${cfg.gezi}.json`, { cache: "no-cache" })
       .then((y) => (y.ok ? y.json() : null))
       .then((veri) => {
         if (!veri || !veri.fotograflar || !veri.fotograflar.length) return;
@@ -2367,9 +2356,13 @@ function hubKapisiInsa(cfg, yuva) {
   // duvarlar, tavan ışığı ve o gezinin fotoğrafları. Kapı açılınca düz bir
   // renk değil, derinliğe uzanan gerçek bir iç mekân görünür.
   const vestibul = cfg.acik ? vestibulKur(grup, cfg) : null;
-  const tabela = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.0),
-    new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk), transparent: true }));
-  tabela.position.set(0, 4.15, 0.03);
+  // Tabela kültürel geçidin ÖNÜNDE ve ÜSTÜNDE durur: geçit eklendikten
+  // sonra kirişin arkasında kalıp okunmuyordu.
+  const tabela = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.1),
+    new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk),
+                                  transparent: true, depthTest: false }));
+  tabela.renderOrder = 5;
+  tabela.position.set(0, 5.35, 0.95);
   grup.add(tabela);
   if (cfg.gezi) {
     const gecit = kapiGecidi(cfg.gezi);
@@ -2408,7 +2401,7 @@ async function salonYukle(kapi) {
   if (salonlar.has(id) || kapi.yukleniyor) return true;
   kapi.yukleniyor = true;
   try {
-    const yanit = await fetch(`data/${id}.json`, { cache: "force-cache" });
+    const yanit = await fetch(`data/${id}.json`, { cache: "no-cache" });
     if (!yanit.ok) throw new Error(yanit.status);
     const veri = await yanit.json();
 
@@ -2463,24 +2456,15 @@ async function tumSalonlariKur(ilerleme) {
   const acik = hub.kapilar.filter((k) => k.acik);
   if (!acik.length) { if (ilerleme) ilerleme(null); return; }
 
-  if (ilerleme) ilerleme(acik[0].gezi.ad);
-  await salonYukle(acik[0]);
-  await kuyrukBosalsin();
-  if (ilerleme) ilerleme(null);          // giriş açılabilir
-
-  // Kalanlar ziyaretçi dolaşırken kurulur. Bu sırada kısa takılmalar
-  // olabildiği için HUD'da ne olduğunu yazıyoruz — sessiz donma hata
-  // gibi algılanıyordu.
-  const rozet = qs("#hazirlik");
-  for (let i = 1; i < acik.length; i++) {
-    if (rozet) {
-      rozet.textContent = `${acik[i].gezi.ad} sergisi hazırlanıyor…`;
-      rozet.classList.add("gorunur");
-    }
+  // Binanın TAMAMI kurulmadan giriş açılmaz. Yarım hazır girip yürürken
+  // takılmak hata gibi algılanıyordu; bunun yerine kısa ve açıklamalı
+  // bir bekleme var.
+  for (let i = 0; i < acik.length; i++) {
+    if (ilerleme) ilerleme(acik[i].gezi.ad, i, acik.length);
     await salonYukle(acik[i]);
     await kuyrukBosalsin();
   }
-  if (rozet) rozet.classList.remove("gorunur");
+  if (ilerleme) ilerleme(null, acik.length, acik.length);
 }
 
 function hubKur() {
@@ -2496,12 +2480,10 @@ function hubKur() {
   const duvarMat = new THREE.MeshStandardMaterial({ map: duvarDoku, roughness: 0.92, side: THREE.DoubleSide });
   const tavanMat = new THREE.MeshStandardMaterial({ color: 0xe6e0d2, roughness: 0.95, side: THREE.DoubleSide });
 
-  // Zemin: ayna yansıması + cilalı taş
-  const yansima = new Reflector(new THREE.PlaneGeometry(AW, AD), { textureWidth: 1024, textureHeight: 1024, color: 0x777777 });
-  yansima.rotation.x = -Math.PI / 2; yansima.position.y = 0.004; ekle(yansima);
+  // Zemin: cilalı taş (ayna yok — hayalet iz bırakıyordu, bkz. holKur)
   const zeminDoku = mermerZeminDokusu(); zeminDoku.repeat.set(AW / 4, AD / 4);
   const zemin = new THREE.Mesh(new THREE.PlaneGeometry(AW, AD),
-    new THREE.MeshStandardMaterial({ map: zeminDoku, roughness: 0.34, metalness: 0.04, transparent: true, opacity: 0.95 }));
+    new THREE.MeshStandardMaterial({ map: zeminDoku, roughness: 0.22, metalness: 0.18 }));
   zemin.rotation.x = -Math.PI / 2; zemin.position.y = 0.012; ekle(zemin);
 
   // Tavan + tepe ışıklığı
@@ -2684,8 +2666,12 @@ async function hubBaslat() {
   // Ziyaretçi daha girmeden bütün sergiler ayağa kalkar; sonrasında kapıya
   // yaklaşınca hiçbir yükleme/sökme olmaz, takılma yaşanmaz.
   const aciklamaEl = qs("#giris-aciklama");
-  tumSalonlariKur((ad) => {
-    if (ad) { aciklamaEl.textContent = `${ad} sergisi hazırlanıyor…`; return; }
+  await tumSalonlariKur((ad, i, toplam) => {
+    if (ad) {
+      aciklamaEl.textContent = `Salonlar hazırlanıyor… ${ad} (${i + 1}/${toplam})`;
+      btnGir.textContent = "Hazırlanıyor…";
+      return;
+    }
     aciklamaEl.textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
     btnGir.disabled = false;
     btnGir.textContent = "Salona Gir";
