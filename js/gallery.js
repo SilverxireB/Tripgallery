@@ -63,6 +63,22 @@ const TEMALAR = {
     slogan: "— UZAK DİYARLARDAN ANILAR —",
     dekor: { thaiFanus: true, altinStupa: true },
   },
+  misir: {
+    // Çölün tozu ışıkta asılı kalır: yavaş süzülen altın zerreler.
+    parcaciklar: "toz",
+    isiklikDeseni: null,
+    plaketMuhru: false,
+    slogan: "— ÇÖLÜN HAFIZASI —",
+    dekor: { papirusKolon: true, mesale: true },
+  },
+  bali: {
+    // Bali'nin çiçeği frangipani: yere düşüp birikir.
+    parcaciklar: "plumeria",
+    isiklikDeseni: null,
+    plaketMuhru: false,
+    slogan: "— TANRILAR ADASINDAN —",
+    dekor: { tasHeykel: true, yesillik: true },
+  },
 };
 let TEMA = TEMALAR.varsayilan;
 
@@ -358,8 +374,25 @@ function khomLoiDokusu() {
   return t;
 }
 
+function tozDokusu() {
+  // Çöl tozu: ışıkta parlayan yumuşak altın zerre
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 15);
+  g.addColorStop(0, "rgba(255, 236, 190, 0.95)");
+  g.addColorStop(0.4, "rgba(230, 200, 140, 0.35)");
+  g.addColorStop(1, "rgba(220, 190, 130, 0)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, 32, 32);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // Temaya göre havada süzülen parçacık dokusu
 function parcacikDokusu() {
+  if (TEMA.parcaciklar === "toz") return tozDokusu();
   if (TEMA.parcaciklar === "fener") return khomLoiDokusu();
   if (TEMA.parcaciklar === "plumeria") return plumeriaDokusu();
   return sakuraDokusu();
@@ -872,17 +905,20 @@ function parcacikKur({ W, L, H }) {
   // (khom loi fenerleri — tavana doğru süzülüp sönümlenir).
   if (TEMA.parcaciklar) {
   const yukselen = TEMA.parcaciklar === "fener";
+  const toz = TEMA.parcaciklar === "toz";
   const parcaDoku = parcacikDokusu();
-  const adet = yukselen ? Math.min(70, Math.floor(L * 0.9)) : Math.min(1200, Math.floor(L * 10));
-  const boy = yukselen ? 0.32 : 0.085;
+  const adet = yukselen ? Math.min(70, Math.floor(L * 0.9))
+             : toz ? Math.min(500, Math.floor(L * 5))
+             : Math.min(1200, Math.floor(L * 10));
+  const boy = yukselen ? 0.32 : toz ? 0.05 : 0.085;
   const yaprakGeo = new THREE.PlaneGeometry(boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
     transparent: true,
-    opacity: yukselen ? 0.5 : 0.92,   // fenerler dikkat çalmasın, arka planda kalsın
+    opacity: yukselen ? 0.5 : toz ? 0.55 : 0.92,   // fener/toz arka planda kalsın
     depthWrite: false,
     side: THREE.DoubleSide,
-    blending: yukselen ? THREE.AdditiveBlending : THREE.NormalBlending, // fenerler ışıldasın
+    blending: (yukselen || toz) ? THREE.AdditiveBlending : THREE.NormalBlending, // ışıldasın
   });
   const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, adet);
   yapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -896,7 +932,8 @@ function parcacikKur({ W, L, H }) {
       y: Math.random() * H,
       z: (Math.random() - 0.5) * (L - 2),
       dusme: yukselen ? 0.16 + Math.random() * 0.2   // yükseliş hızı (m/sn)
-                      : 0.12 + Math.random() * 0.22, // düşüş hızı
+           : toz ? 0.02 + Math.random() * 0.05        // toz neredeyse asılı durur
+           : 0.12 + Math.random() * 0.22,             // düşüş hızı
       sallanma: yukselen ? 0.15 + Math.random() * 0.25 : 0.4 + Math.random() * 0.7,
       faz: Math.random() * Math.PI * 2,
       donme: yukselen ? (Math.random() - 0.5) * 0.25 : (Math.random() - 0.5) * 2.2,
@@ -906,7 +943,7 @@ function parcacikKur({ W, L, H }) {
   ekle(yapraklar);
 
   let yerdeYapraklar = null;
-  if (!yukselen) {
+  if (!yukselen && !toz) {
     // --- Yere düşen yaprakların biriktiği katman ---
     // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
     // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
@@ -1009,6 +1046,116 @@ function dekorKur({ W, L, H }) {
         const govde = new THREE.Mesh(govdeGeo, choMat); govde.scale.set(1, 1.35, 1); g.add(govde);
         const askı = new THREE.Mesh(ipGeo, ip); askı.position.y = 0.82; g.add(askı);
         g.position.set(sx * 2.45, 4.0, z);
+        ekle(g);
+      }
+    }
+  }
+
+  // === MISIR ===
+
+  // --- Papirüs sütunları + kabartma bandı ---
+  if (d.papirusKolon) {
+    const tas = new THREE.MeshStandardMaterial({ color: 0xd8bd85, roughness: 0.92 });
+    const lapis = new THREE.MeshStandardMaterial({ color: 0x1f3f7a, roughness: 0.65 });
+    const altin = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.35, metalness: 0.8 });
+    for (let z = L / 2 - 12; z > -L / 2 + 6; z -= 16) {
+      for (const sx of [-1, 1]) {
+        const g = new THREE.Group();
+        const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, H - 0.9, 12), tas);
+        govde.position.y = (H - 0.9) / 2;
+        g.add(govde);
+        // Papirüs başlığı: yukarı doğru açılan çan
+        const baslik = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.3, 0.6, 12), tas);
+        baslik.position.y = H - 0.6;
+        g.add(baslik);
+        const bilezik = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.14, 12), lapis);
+        bilezik.position.y = H - 1.0;
+        g.add(bilezik);
+        const kaide = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.2, 12), tas);
+        kaide.position.y = 0.1;
+        g.add(kaide);
+        const halka = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 12), altin);
+        halka.position.y = 1.5;
+        g.add(halka);
+        g.position.set(sx * 3.35, 0, z);
+        ekle(g);
+      }
+    }
+  }
+
+  // --- Duvar dibi meşaleler: sıcak, titrek ışık ---
+  if (d.mesale) {
+    const metal = new THREE.MeshStandardMaterial({ color: 0x3b3129, roughness: 0.5, metalness: 0.6 });
+    const alev = new THREE.MeshBasicMaterial({ color: 0xffb45c });
+    let taraf = 1;
+    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 13) {
+      const g = new THREE.Group();
+      const sap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.5, 8), metal);
+      sap.position.y = 0.75;
+      g.add(sap);
+      const kase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.1, 0.24, 10), metal);
+      kase.position.y = 1.6;
+      g.add(kase);
+      const atesTopu = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), alev);
+      atesTopu.scale.y = 1.5;
+      atesTopu.position.y = 1.8;
+      g.add(atesTopu);
+      const isik = new THREE.PointLight(0xffa94d, 5, 6, 1.8);
+      isik.position.y = 1.85;
+      g.add(isik);
+      g.position.set(taraf * 3.4, 0, z);
+      ekle(g);
+      taraf *= -1;
+    }
+  }
+
+  // === BALİ ===
+
+  // --- Kapı diplerinde koruyucu taş heykeller (dvarapala) ---
+  if (d.tasHeykel) {
+    const tas = new THREE.MeshStandardMaterial({ color: 0x6f6a60, roughness: 0.95 });
+    const kumas = new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.9 });
+    let taraf = 1;
+    for (let z = L / 2 - 10; z > -L / 2 + 6; z -= 15) {
+      const g = new THREE.Group();
+      const kaide = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.34, 0.62), tas);
+      kaide.position.y = 0.17;
+      g.add(kaide);
+      const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.9, 8), tas);
+      govde.position.y = 0.79;
+      g.add(govde);
+      // Kutsal dama desenli kumaş (poleng) — Bali'nin imzası
+      const sarik = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.26, 8), kumas);
+      sarik.position.y = 0.72;
+      g.add(sarik);
+      const bas = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), tas);
+      bas.position.y = 1.36;
+      g.add(bas);
+      const tac = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.34, 8), tas);
+      tac.position.y = 1.66;
+      g.add(tac);
+      g.position.set(taraf * 3.35, 0, z);
+      ekle(g);
+      taraf *= -1;
+    }
+  }
+
+  // --- Tavandan sarkan tropikal yeşillik ---
+  if (d.yesillik) {
+    const yaprakMat = new THREE.MeshStandardMaterial({
+      color: 0x3f7d4a, roughness: 0.85, side: THREE.DoubleSide,
+    });
+    const yaprakGeo = new THREE.PlaneGeometry(0.22, 0.8);
+    for (let z = L / 2 - 8; z > -L / 2 + 6; z -= 7) {
+      for (const sx of [-1, 1]) {
+        const g = new THREE.Group();
+        for (let i = 0; i < 5; i++) {
+          const y = new THREE.Mesh(yaprakGeo, yaprakMat);
+          y.position.set((Math.random() - 0.5) * 0.4, -0.4 - Math.random() * 0.5, (Math.random() - 0.5) * 0.3);
+          y.rotation.set(0.2 + Math.random() * 0.3, Math.random() * Math.PI, (Math.random() - 0.5) * 0.5);
+          g.add(y);
+        }
+        g.position.set(sx * (W / 2 - 0.5), H - 0.15, z);
         ekle(g);
       }
     }
@@ -1857,17 +2004,31 @@ const joyZone = qs("#joystick-zone");
 const joyKnob = qs("#joystick-knob");
 
 if (joyZone) {
-  function joyGuncelle(cx, cy) {
+  // Parmağa göre konumlanan joystick: halka, dokunulan noktada doğar.
+  // Sabit merkezli joystick'te başparmak nereye denk gelirse gelsin oradan
+  // itmek gerekiyordu; bu "acayip" hissin kaynağıydı.
+  const joyHalka = qs("#joystick-halka");
+  const JOY_YARICAP = 58;   // halka yarıçapı (px)
+  let joyMerkezX = 0, joyMerkezY = 0;
+
+  function joyHalkayiTasi(cx, cy) {
     const rect = joyZone.getBoundingClientRect();
-    const r = rect.width / 2;
-    let dx = cx - (rect.left + r);
-    let dy = cy - (rect.top + r);
+    joyMerkezX = cx; joyMerkezY = cy;
+    if (joyHalka) {
+      joyHalka.style.left = `${cx - rect.left}px`;
+      joyHalka.style.top = `${cy - rect.top}px`;
+    }
+  }
+
+  function joyGuncelle(cx, cy) {
+    let dx = cx - joyMerkezX;
+    let dy = cy - joyMerkezY;
     const dist = Math.hypot(dx, dy);
-    if (dist > r) { dx = (dx / dist) * r; dy = (dy / dist) * r; }
+    if (dist > JOY_YARICAP) { dx = (dx / dist) * JOY_YARICAP; dy = (dy / dist) * JOY_YARICAP; }
     joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
     // Merkezde ölü bölge: parmak titremesi istemsiz yürüyüşe dönüşmesin
-    if (dist < r * 0.16) { joyX = 0; joyY = 0; }
-    else { joyX = dx / r; joyY = dy / r; }
+    if (dist < JOY_YARICAP * 0.14) { joyX = 0; joyY = 0; }
+    else { joyX = dx / JOY_YARICAP; joyY = dy / JOY_YARICAP; }
   }
 
   joyZone.addEventListener("touchstart", (e) => {
@@ -1877,6 +2038,8 @@ if (joyZone) {
     joyId = t.identifier;
     joyAktif = true;
     surukleModu = true;
+    joyZone.classList.add("aktif");
+    joyHalkayiTasi(t.clientX, t.clientY);   // halka parmağın altında doğsun
     if (!gezintiAktif) { girisDenendi = true; gezintiBaslat(); }
     joyGuncelle(t.clientX, t.clientY);
   }, {passive: false});
@@ -1898,6 +2061,8 @@ if (joyZone) {
         joyId = null;
         joyX = 0; joyY = 0;
         joyKnob.style.transform = "translate(-50%, -50%)";
+        joyZone.classList.remove("aktif");
+        if (joyHalka) { joyHalka.style.left = "50%"; joyHalka.style.top = "50%"; }
       }
     }
   };
@@ -2266,6 +2431,60 @@ function kapiGecidi(geziId) {
       chofa.rotation.z = sx * -0.5;
       g.add(chofa);
     }
+  } else if (geziId === "misir") {
+    // Pylon: içe eğimli kumtaşı kuleler + cavetto korniş, lapis-altın bant
+    const tas = new THREE.MeshStandardMaterial({ color: 0xd8bd85, roughness: 0.9 });
+    const altin = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.35, metalness: 0.8 });
+    const lapis = new THREE.MeshStandardMaterial({ color: 0x1f3f7a, roughness: 0.6 });
+    for (const sx of [-1, 1]) {
+      // Hafif konik kule (aşağısı geniş) — pylon silueti
+      const kule = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.68, 4.4, 4), tas);
+      kule.rotation.y = Math.PI / 4;
+      kule.position.set(sx * 2.35, 2.2, 0);
+      g.add(kule);
+      const kornis = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 1.5), tas);
+      kornis.position.set(sx * 2.35, 4.5, 0);
+      g.add(kornis);
+      const bant = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.16, 1.36), lapis);
+      bant.position.set(sx * 2.35, 4.28, 0);
+      g.add(bant);
+    }
+    // Üst lento + kanatlı güneş kursu (basitleştirilmiş)
+    const lento = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.42, 0.5), tas);
+    lento.position.set(0, 4.62, 0);
+    g.add(lento);
+    const kurs = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 12), altin);
+    kurs.scale.set(1, 0.85, 0.4);
+    kurs.position.set(0, 5.0, 0.12);
+    g.add(kurs);
+    for (const sx of [-1, 1]) {
+      const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.1, 0.26), altin);
+      kanat.position.set(sx * 0.78, 5.0, 0.12);
+      kanat.rotation.z = sx * 0.06;
+      g.add(kanat);
+    }
+  } else if (geziId === "bali") {
+    // Candi bentar: ortadan ikiye ayrılmış, kademeli taş tapınak kapısı
+    const tas = new THREE.MeshStandardMaterial({ color: 0x6f6a60, roughness: 0.95 });
+    const koyu = new THREE.MeshStandardMaterial({ color: 0x4a463e, roughness: 0.95 });
+    for (const sx of [-1, 1]) {
+      // Kademeli yığın: yukarı doğru daralan bloklar (yarık kapı yarısı)
+      let yy = 0;
+      for (let i = 0; i < 7; i++) {
+        const gen = 1.5 - i * 0.13;
+        const der = 0.9 - i * 0.06;
+        const yuk = 0.62 - i * 0.03;
+        const blok = new THREE.Mesh(new THREE.BoxGeometry(gen, yuk, der), i % 2 ? koyu : tas);
+        // İç kenar kapı açıklığının (±1.45) dışında kalsın, dışa kademelensin
+        blok.position.set(sx * (2.25 + (1.5 - gen) / 2), yy + yuk / 2, 0);
+        g.add(blok);
+        yy += yuk;
+      }
+      const tepe = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 4), tas);
+      tepe.position.set(sx * 2.6, yy + 0.25, 0);
+      tepe.rotation.y = Math.PI / 4;
+      g.add(tepe);
+    }
   } else {
     return null;
   }
@@ -2306,14 +2525,14 @@ function hubKapisiInsa(cfg, yuva) {
   // Kapının ardında serginin GERÇEK giriş koridoru inşa edilir: zemin,
   // duvarlar, tavan ışığı ve o gezinin fotoğrafları. Kapı açılınca düz bir
   // renk değil, derinliğe uzanan gerçek bir iç mekân görünür.
-  const vestibul = cfg.acik ? vestibulKur(grup, cfg) : null;
+  const vestibul = cfg.vestibulVar ? vestibulKur(grup, cfg) : null;
   // Tabela kültürel geçidin ÖNÜNDE ve ÜSTÜNDE durur: geçit eklendikten
   // sonra kirişin arkasında kalıp okunmuyordu.
   const tabela = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.98),
     new THREE.MeshBasicMaterial({ map: hubTabelaDokusu(cfg.ad, cfg.altbaslik, cfg.renk),
                                   transparent: true, depthTest: false }));
   tabela.renderOrder = 5;
-  tabela.position.set(0, 3.74, 0.68);  // kapının hemen üstü, geçidin de önünde
+  tabela.position.set(0, 3.62, 0.68);  // kapı kasasının hemen üstü, geçidin önünde
   grup.add(tabela);
   if (cfg.gezi) {
     const gecit = kapiGecidi(cfg.gezi);
@@ -2513,7 +2732,8 @@ function hubKur() {
   GEZILER.slice(0, 4).forEach((gezi, i) => {
     const acik = gezi.durum === "acik";
     const rec = hubKapisiInsa(
-      { ad: gezi.ad, renk: gezi.renk, acik, gezi: acik ? gezi.id : null,
+      { ad: gezi.ad, renk: gezi.renk, acik, gezi: gezi.id,   // geçit her zaman kurulur
+        vestibulVar: acik,                                     // koridor yalnızca açık sergide
         hedef: acik ? `?gezi=${gezi.id}` : null, altbaslik: acik ? "" : gezi.altbaslik },
       yuvalar[i]
     );
@@ -2585,9 +2805,10 @@ async function hubBaslat() {
   hubKur();
   qs("#giris-eyebrow").textContent = "SANAL GALERİ";
   qs("#giris-baslik").textContent = "Gezi Galerim";
-  qs("#giris-aciklama").textContent = "Sergiler hazırlanıyor…";
+  qs("#giris-aciklama").textContent = "Anılarınızın sergilendiği sanal müzeye hoş geldiniz.";
   btnGir.disabled = true;
-  btnGir.textContent = "Hazırlanıyor…";
+  btnGir.textContent = "Hazırlanıyor";
+  qs("#ilerleme")?.classList.add("acik");
   document.title = "Gezi Galerim — Sanal Galeri";
   // Otomatik tur yalnızca bir serginin içindeyken anlamlı: hub'da gizli,
   // salona girince belirir (bolgeGorunum her karede günceller).
@@ -2627,12 +2848,20 @@ async function hubBaslat() {
   // Ziyaretçi daha girmeden bütün sergiler ayağa kalkar; sonrasında kapıya
   // yaklaşınca hiçbir yükleme/sökme olmaz, takılma yaşanmaz.
   const aciklamaEl = qs("#giris-aciklama");
+  const ilerlemeKutu = qs("#ilerleme");
+  const ilerlemeDolgu = qs("#ilerleme-dolgu");
+  const ilerlemeNot = qs("#ilerleme-not");
+
   await tumSalonlariKur((ad, i, toplam) => {
     if (ad) {
-      aciklamaEl.textContent = `Salonlar hazırlanıyor… ${ad} (${i + 1}/${toplam})`;
-      btnGir.textContent = "Hazırlanıyor…";
+      // Sakin ve profesyonel: hangi salonun döşendiği + ince ilerleme çubuğu
+      if (ilerlemeNot) ilerlemeNot.textContent = `${ad} salonu düzenleniyor`;
+      if (ilerlemeDolgu) ilerlemeDolgu.style.width = `${Math.round((i / toplam) * 100)}%`;
       return;
     }
+    if (ilerlemeDolgu) ilerlemeDolgu.style.width = "100%";
+    if (ilerlemeNot) ilerlemeNot.textContent = "Sergi hazır";
+    setTimeout(() => ilerlemeKutu?.classList.remove("acik"), 700);
     aciklamaEl.textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
     btnGir.disabled = false;
     btnGir.textContent = "Salona Gir";
