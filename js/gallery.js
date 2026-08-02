@@ -69,7 +69,7 @@ const TEMALAR = {
     isiklikDeseni: null,
     plaketMuhru: false,
     slogan: "— ÇÖLÜN HAFIZASI —",
-    dekor: { papirusKolon: true, mesale: true },
+    dekor: { sfenks: true, mesale: true },
   },
   bali: {
     // Bali'nin çiçeği frangipani: yere düşüp birikir.
@@ -1144,32 +1144,87 @@ function dekorKur({ W, L, H }) {
 
   // === MISIR ===
 
-  // --- Papirüs sütunları + kabartma bandı ---
-  if (d.papirusKolon) {
-    const tas = new THREE.MeshStandardMaterial({ color: 0xd8bd85, roughness: 0.92 });
-    const lapis = new THREE.MeshStandardMaterial({ color: 0x1f3f7a, roughness: 0.65 });
-    const altin = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.35, metalness: 0.8 });
-    for (let z = L / 2 - 12; z > -L / 2 + 6; z -= 16) {
+  // --- Sfenks heykelleri (dromos: yolun iki yanında, birbirine bakan çift) ---
+  // Not: burada eskiden tavana kadar çıkan papirüs sütunları vardı. Salon
+  // yalnızca 7.8 m geniş; sütunlar duvardaki eserlerin tam önüne denk gelip
+  // tabloyu kapatıyordu. Sfenks alçak (~0.95 m) olduğu için hiçbir eseri
+  // kapatmaz, üstelik Mısır'ın en tanınan silueti.
+  if (d.sfenks) {
+    const tas = new THREE.MeshStandardMaterial({ color: 0xd2b986, roughness: 0.95 });
+    const tasKoyu = new THREE.MeshStandardMaterial({ color: 0xb59a69, roughness: 0.95 });
+    const altin = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.38, metalness: 0.75 });
+    const lapis = new THREE.MeshStandardMaterial({ color: 0x1f3f7a, roughness: 0.6 });
+
+    const sfenksYap = () => {
+      // +z yönüne bakar; kaide dahil toplam yükseklik ~0.95 m
+      const g = new THREE.Group();
+      const kaide = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.16, 2.05), tasKoyu);
+      kaide.position.y = 0.08; g.add(kaide);
+
+      // Gövde: arkada yüksek sağrı, öne doğru alçalan sırt
+      const sagri = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.46, 0.95), tas);
+      sagri.position.set(0, 0.39, -0.5); g.add(sagri);
+      const bel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.36, 0.6), tas);
+      bel.position.set(0, 0.34, 0.15); g.add(bel);
+
+      // Uzanmış ön ayaklar
       for (const sx of [-1, 1]) {
-        const g = new THREE.Group();
-        const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, H - 0.9, 12), tas);
-        govde.position.y = (H - 0.9) / 2;
-        g.add(govde);
-        // Papirüs başlığı: yukarı doğru açılan çan
-        const baslik = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.3, 0.6, 12), tas);
-        baslik.position.y = H - 0.6;
-        g.add(baslik);
-        const bilezik = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.14, 12), lapis);
-        bilezik.position.y = H - 1.0;
-        g.add(bilezik);
-        const kaide = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.2, 12), tas);
-        kaide.position.y = 0.1;
-        g.add(kaide);
-        const halka = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 12), altin);
-        halka.position.y = 1.5;
-        g.add(halka);
-        g.position.set(sx * 3.35, 0, z);
-        ekle(g);
+        const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 1.15), tas);
+        bacak.position.set(sx * 0.19, 0.26, 0.62); g.add(bacak);
+        const pence = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.17, 0.26), tas);
+        pence.position.set(sx * 0.19, 0.245, 1.22); g.add(pence);
+        // arka pençe (kıvrılmış)
+        const arka = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.5), tas);
+        arka.position.set(sx * 0.23, 0.27, -0.72); g.add(arka);
+      }
+      // Kuyruk: sağ böğürde kıvrılan ince şerit
+      const kuyruk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.75), tas);
+      kuyruk.position.set(0.3, 0.2, -0.62); kuyruk.rotation.y = 0.5; g.add(kuyruk);
+
+      // Göğüs: başı taşıyan yükselti
+      const gogus = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.44, 0.4), tas);
+      gogus.position.set(0, 0.52, 0.42); g.add(gogus);
+
+      // Baş + nemes başlığı. Heykel bütünüyle taş: altın yalnızca alın
+      // bandında ve sakalda: baştan aşağı yaldız, müze heykelinden çok
+      // hediyelik eşya gibi duruyordu.
+      const bas = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.28), tas);
+      bas.position.set(0, 0.85, 0.5); g.add(bas);
+      const nemes = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.34, 0.24), tasKoyu);
+      nemes.position.set(0, 0.86, 0.42); g.add(nemes);
+      const nemesTepe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.12, 0.3), tasKoyu);
+      nemesTepe.position.set(0, 1.02, 0.46); g.add(nemesTepe);
+      for (const sx of [-1, 1]) {
+        // omuza inen nemes kanadı
+        const kanat = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.32, 0.22), tasKoyu);
+        kanat.position.set(sx * 0.23, 0.7, 0.47);
+        kanat.rotation.z = sx * 0.12; g.add(kanat);
+      }
+      // Yüz: başlığın önünden çıkan taş yüzey
+      const yuz = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.1), tas);
+      yuz.position.set(0, 0.84, 0.63); g.add(yuz);
+      // Alın bandı: nemes'in ön kenarındaki ince yaldız şerit
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.055, 0.16), altin);
+      band.position.set(0, 0.985, 0.55); g.add(band);
+      // Alında uraeus (kobra)
+      const uraeus = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.11, 0.06), lapis);
+      uraeus.position.set(0, 1.02, 0.59); g.add(uraeus);
+      // Çene sakalı
+      const sakal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.17, 0.08), altin);
+      sakal.position.set(0, 0.67, 0.62); g.add(sakal);
+      return g;
+    };
+
+    // Girişte bir çift; salon uzunsa ortada bir çift daha. İkisi de iki
+    // eserin ARASINA denk gelir, hiçbir tablonun önünü kapatmaz.
+    const zNoktalari = [L / 2 - 3.4];
+    if (L > 34) zNoktalari.push(L / 2 - 6 - 4.5 * 3.7);
+    for (const z of zNoktalari) {
+      for (const sx of [-1, 1]) {
+        const s = sfenksYap();
+        s.position.set(sx * 2.75, 0, z);
+        s.rotation.y = -sx * Math.PI / 2;  // yola, yani birbirlerine bakarlar
+        ekle(s);
       }
     }
   }
