@@ -130,6 +130,20 @@ let EKLE = scene;
 function ekle(...nesneler) { EKLE.add(...nesneler); return EKLE; }
 scene.background = new THREE.Color(0x0d0b09);
 
+// --- IŞIK BÜTÇESİ (dokunmadan önce oku) ---------------------------------
+// Tek bina modunda tüm sergiler AYNI sahnede duruyor, dolayısıyla sahnedeki
+// her ışık her MeshStandardMaterial'in shader'ına giriyor. three.js ışık
+// sayısına göre program derler; ışıklar arttıkça fragment shader'ın uniform
+// ihtiyacı büyür. Masaüstü GPU'lar 4096 vec4 bildirdiği için sorun görünmez,
+// telefonlarda sınır çoğu zaman 256-1024'tür: aşıldığında program LINK
+// EDİLEMEZ ve ışıklı her yüzey SİYAH çizilir (MeshBasicMaterial'ler görünmeye
+// devam ettiği için "sadece fotoğraflar duruyor" gibi görünür — tam olarak
+// bu hata yaşandı: eser başına SpotLight ile 20+ spot birikmişti).
+// Kural: eser/dekor başına ışık YOK. Işık yerine sahte ışık gölü dokusu,
+// kendinden aydınlık (Basic) yüzey veya additive parıltı kullan.
+// Hedef tavan: 0 spot, <=6 point, <=4 rectarea, 1 ambient, 1 hemisphere.
+// ------------------------------------------------------------------------
+
 // Sinematik film taneciği: statik gürültü karosu, CSS animasyonuyla kıpırdar
 const gren = qs("#gren");
 if (gren) {
@@ -318,24 +332,55 @@ function sakuraDokusu() {
 }
 
 function plumeriaDokusu() {
-  // Frangipani (plumeria) yaprağı: krem-beyaz, dipte sarı vurgu
+  // Frangipani (jepun) çiçeğinin TAMAMI — Bali'nin imzası tek yaprak değil,
+  // beş yaprağı fırıldak gibi bindirilmiş, ortası sarı, beyaz çiçektir.
+  // Tapınak kapılarında, kulak arkasında, sunularda hep bütün haliyle durur.
   const c = document.createElement("canvas");
-  c.width = c.height = 64;
+  c.width = c.height = 128;
   const x = c.getContext("2d");
-  const g = x.createRadialGradient(32, 44, 3, 32, 30, 30);
-  g.addColorStop(0, "#ffe9a8");
-  g.addColorStop(0.4, "#fffdf4");
-  g.addColorStop(1, "#f3ead4");
-  x.fillStyle = g;
-  x.beginPath();
-  x.moveTo(32, 6);
-  x.quadraticCurveTo(16, 6, 14, 26);
-  x.quadraticCurveTo(12, 46, 30, 56);
-  x.quadraticCurveTo(32, 57, 34, 56);
-  x.quadraticCurveTo(52, 46, 50, 26);
-  x.quadraticCurveTo(48, 6, 32, 6);
-  x.closePath();
-  x.fill();
+  const M = 64;
+
+  const yaprakCiz = (aci) => {
+    x.save();
+    x.translate(M, M);
+    x.rotate(aci);
+    const g = x.createLinearGradient(0, 0, 0, -56);
+    g.addColorStop(0, "#ffd875");     // dipte sıcak sarı göbek
+    g.addColorStop(0.32, "#fff6d8");
+    g.addColorStop(0.75, "#ffffff");
+    g.addColorStop(1, "#f6f1e4");     // uçta hafif kırık beyaz
+    x.fillStyle = g;
+    x.beginPath();
+    x.moveTo(0, 2);
+    // sol kenar: göbekten dışa doğru açılan geniş yay
+    x.bezierCurveTo(-24, -10, -31, -40, -12, -55);
+    // yuvarlak uç
+    x.quadraticCurveTo(0, -62, 13, -53);
+    // sağ kenar: fırıldak dönüşünü veren daha dik dönüş
+    x.bezierCurveTo(27, -37, 20, -11, 0, 2);
+    x.closePath();
+    x.fill();
+    // yaprak ortasında çok hafif damar gölgesi — düz beyaz lekeyi kırar
+    x.strokeStyle = "rgba(214, 198, 158, 0.35)";
+    x.lineWidth = 1.2;
+    x.beginPath();
+    x.moveTo(-2, -6);
+    x.quadraticCurveTo(-6, -30, 1, -48);
+    x.stroke();
+    x.restore();
+  };
+
+  // Bindirme sırası önemli: her yaprak bir sonrakinin altında kalsın
+  for (let i = 4; i >= 0; i--) yaprakCiz((i * Math.PI * 2) / 5);
+
+  // Göbek: sarı ışıltı
+  const gob = x.createRadialGradient(M, M, 1, M, M, 17);
+  gob.addColorStop(0, "rgba(255, 205, 74, 0.95)");
+  gob.addColorStop(0.55, "rgba(255, 224, 140, 0.55)");
+  gob.addColorStop(1, "rgba(255, 235, 175, 0)");
+  x.fillStyle = gob;
+  x.beginPath(); x.arc(M, M, 17, 0, Math.PI * 2); x.fill();
+
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -369,6 +414,44 @@ function khomLoiDokusu() {
   // Alt ağızdaki alev
   x.fillStyle = "rgba(255, 246, 214, 0.9)";
   x.beginPath(); x.ellipse(32, 47, 4, 3, 0, 0, Math.PI * 2); x.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function sarmasikDokusu() {
+  // Sarkan sarmaşık teli: ince sap + iki yana dizilmiş yapraklar. Alfa'lı
+  // olduğu için düz yeşil şerit yerine gerçekten bitki siluetine benziyor.
+  const c = document.createElement("canvas");
+  c.width = 32; c.height = 256;
+  const x = c.getContext("2d");
+  x.strokeStyle = "#3d6b3a";
+  x.lineWidth = 1.6;
+  x.beginPath();
+  x.moveTo(16, 0);
+  x.quadraticCurveTo(11, 128, 16, 252);
+  x.stroke();
+  for (let i = 0; i < 11; i++) {
+    const y = 14 + i * 22;
+    const sag = i % 2 === 0;
+    const boy = 9 + (i % 3) * 2;
+    x.save();
+    x.translate(16, y);
+    x.rotate((sag ? 1 : -1) * (0.6 + (i % 3) * 0.12));
+    x.fillStyle = i % 2 ? "#4f8f52" : "#3a6f3f";
+    x.beginPath();
+    x.ellipse(sag ? boy * 0.7 : -boy * 0.7, 0, boy, boy * 0.52, 0, 0, Math.PI * 2);
+    x.fill();
+    x.restore();
+  }
+  // uçta biraz seyrelt: alt kenar sertçe kesilmiş görünmesin
+  const sil = x.createLinearGradient(0, 214, 0, 256);
+  sil.addColorStop(0, "rgba(0,0,0,1)");
+  sil.addColorStop(1, "rgba(0,0,0,0)");
+  x.globalCompositeOperation = "destination-in";
+  x.fillStyle = sil;
+  x.fillRect(0, 214, 32, 42);
+  x.globalCompositeOperation = "source-over";
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -793,10 +876,9 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc, suslemeyiErtele) {
   tanitim.position.set(0, H / 2, -L / 2 + 0.03);
   ekle(tanitim);
 
-  const tanitimSpot = new THREE.SpotLight(0xfff0d8, 26, 12, 0.7, 0.7, 1.6);
-  tanitimSpot.position.set(0, H - 0.4, -L / 2 + 4);
-  tanitimSpot.target.position.set(0, 2.2, -L / 2);
-  ekle(tanitimSpot, tanitimSpot.target);
+  // Not: burada eskiden bir SpotLight vardı. Tanıtım duvarı zaten
+  // MeshBasicMaterial (kendinden aydınlık), spot yalnızca ışık bütçesini
+  // yiyordu — bkz. dosya başındaki ışık bütçesi notu.
 
   // --- Serginin ön duvarı ---
   // Tek bina modunda salon hub'ın kapısına asılıdır: ön duvarı ve çıkış
@@ -906,11 +988,15 @@ function parcacikKur({ W, L, H }) {
   if (TEMA.parcaciklar) {
   const yukselen = TEMA.parcaciklar === "fener";
   const toz = TEMA.parcaciklar === "toz";
+  // Jepun BÜTÜN bir çiçek: sakura yaprağından iri, bu yüzden çok daha az
+  // ve çok daha ağır süzülür. Kalabalık olunca kar gibi görünüp saçmalıyordu.
+  const cicek = TEMA.parcaciklar === "plumeria";
   const parcaDoku = parcacikDokusu();
   const adet = yukselen ? Math.min(70, Math.floor(L * 0.9))
              : toz ? Math.min(500, Math.floor(L * 5))
+             : cicek ? Math.min(280, Math.floor(L * 4))
              : Math.min(1200, Math.floor(L * 10));
-  const boy = yukselen ? 0.32 : toz ? 0.05 : 0.085;
+  const boy = yukselen ? 0.32 : toz ? 0.05 : cicek ? 0.19 : 0.085;
   const yaprakGeo = new THREE.PlaneGeometry(boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
@@ -933,10 +1019,15 @@ function parcacikKur({ W, L, H }) {
       z: (Math.random() - 0.5) * (L - 2),
       dusme: yukselen ? 0.16 + Math.random() * 0.2   // yükseliş hızı (m/sn)
            : toz ? 0.02 + Math.random() * 0.05        // toz neredeyse asılı durur
+           : cicek ? 0.09 + Math.random() * 0.11      // çiçek ağır ağır iner
            : 0.12 + Math.random() * 0.22,             // düşüş hızı
-      sallanma: yukselen ? 0.15 + Math.random() * 0.25 : 0.4 + Math.random() * 0.7,
+      sallanma: yukselen ? 0.15 + Math.random() * 0.25
+              : cicek ? 0.2 + Math.random() * 0.3
+              : 0.4 + Math.random() * 0.7,
       faz: Math.random() * Math.PI * 2,
-      donme: yukselen ? (Math.random() - 0.5) * 0.25 : (Math.random() - 0.5) * 2.2,
+      donme: yukselen ? (Math.random() - 0.5) * 0.25
+           : cicek ? (Math.random() - 0.5) * 0.7      // fırıldak gibi yavaş döner
+           : (Math.random() - 0.5) * 2.2,
       egim: Math.random() * Math.PI * 2,
     });
   }
@@ -947,9 +1038,9 @@ function parcacikKur({ W, L, H }) {
     // --- Yere düşen yaprakların biriktiği katman ---
     // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
     // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
-    const YERDE_KAPASITE = 24000;
+    const YERDE_KAPASITE = cicek ? 4000 : 24000;
     yerdeYapraklar = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(0.09, 0.09),
+      new THREE.PlaneGeometry(cicek ? 0.18 : 0.09, cicek ? 0.18 : 0.09),
       new THREE.MeshBasicMaterial({
         map: parcaDoku, transparent: true, opacity: 0.85,
         depthWrite: false, side: THREE.DoubleSide,
@@ -1100,9 +1191,15 @@ function dekorKur({ W, L, H }) {
       atesTopu.scale.y = 1.5;
       atesTopu.position.y = 1.8;
       g.add(atesTopu);
-      const isik = new THREE.PointLight(0xffa94d, 5, 6, 1.8);
-      isik.position.y = 1.85;
-      g.add(isik);
+      // Gerçek ışık yerine kameraya dönük additive hale: ışık bütçesi
+      // dolmasın (bkz. dosya başındaki IŞIK BÜTÇESİ notu).
+      const hale = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tozDokusu(), color: 0xffa94d, transparent: true,
+        opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      hale.scale.set(1.8, 1.8, 1);
+      hale.position.y = 1.85;
+      g.add(hale);
       g.position.set(taraf * 3.4, 0, z);
       ekle(g);
       taraf *= -1;
@@ -1144,11 +1241,14 @@ function dekorKur({ W, L, H }) {
   if (d.yesillik) {
     // Sarkan sarmaşık: ince, farklı boylarda şeritler — düz yeşil levha
     // gibi durmasın diye dar tutulur ve hafifçe eğilir.
+    const sarmasikDoku = sarmasikDokusu();
     const yaprakMat = new THREE.MeshStandardMaterial({
-      color: 0x3f7d4a, roughness: 0.9, side: THREE.DoubleSide,
+      map: sarmasikDoku, transparent: true, alphaTest: 0.35,
+      roughness: 0.9, side: THREE.DoubleSide,
     });
     const koyuMat = new THREE.MeshStandardMaterial({
-      color: 0x2f6238, roughness: 0.9, side: THREE.DoubleSide,
+      map: sarmasikDoku, color: 0xb9d6b0, transparent: true, alphaTest: 0.35,
+      roughness: 0.9, side: THREE.DoubleSide,
     });
     for (let z = L / 2 - 8; z > -L / 2 + 6; z -= 6) {
       for (const sx of [-1, 1]) {
@@ -1156,7 +1256,8 @@ function dekorKur({ W, L, H }) {
         for (let i = 0; i < 7; i++) {
           const boy = 0.5 + Math.random() * 0.9;
           const y = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.07 + Math.random() * 0.05, boy),
+            // Doku dikey 1:8 oranında; en de ona yakın kalsın ki yapraklar ezilmesin
+            new THREE.PlaneGeometry(boy * 0.16, boy),
             i % 2 ? koyuMat : yaprakMat
           );
           y.position.set((Math.random() - 0.5) * 0.5, -boy / 2 - 0.05, (Math.random() - 0.5) * 0.35);
@@ -1268,7 +1369,7 @@ function eserKuyrugunuIsle() {
   }
 }
 
-function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
+function tabloOlustur(foto, index, taraf, z, rayArmaturu, kayit) {
   const hedefGrup = EKLE; // doku asenkron gelir; o anki salon grubunu sabitle
   const jeton = salonJeton;
   dokuYukleyici.load(foto.src, (doku) => {
@@ -1286,21 +1387,21 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
 
     const grup = new THREE.Group();
 
-    // Duvara vuran ışık gölü — spot yoksa görüntüyü sahtesiyle tamamlar
-    if (!gercekSpot) {
-      const golPlane = new THREE.Mesh(
-        new THREE.PlaneGeometry(w + 1.5, h + 2.0),
-        new THREE.MeshBasicMaterial({
-          map: isikGolu,
-          transparent: true,
-          opacity: 0.85,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        })
-      );
-      golPlane.position.set(0, 0.45, 0.002);
-      grup.add(golPlane);
-    }
+    // Duvara vuran ışık gölü. Her eserde var: tek binada üç sergi aynı
+    // sahnede durduğu için eser başına gerçek SpotLight kullanılamıyor
+    // (bkz. rayArmaturu). Işık yıkaması bu görevi bedelsiz üstlenir.
+    const golPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(w + 1.5, h + 2.0),
+      new THREE.MeshBasicMaterial({
+        map: isikGolu,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    golPlane.position.set(0, 0.45, 0.002);
+    grup.add(golPlane);
 
     // Ceviz çerçeve. Not: eskiden her eser için ayrı ExtrudeGeometry
     // üretiliyordu (şekil üçgenleştirme) — kurulum maliyetinin en büyük
@@ -1349,10 +1450,10 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     grup.add(plaket);
     plaketler.set(foto.id, plaket);
 
-    // Görünür ray spot armatürü — yalnızca AZ eserli (gerçek spotlu)
-    // salonlarda. 60+ eserde 120+ ek çizim çağrısı demekti; tavandaki
-    // küçük armatürün katkısı o maliyeti hak etmiyor.
-    if (gercekSpot) {
+    // Görünür ray spot armatürü — yalnızca AZ eserli salonlarda. 60+ eserde
+    // 120+ ek çizim çağrısı demekti; tavandaki küçük armatürün katkısı o
+    // maliyeti hak etmiyor. (Yalnızca gövde; ışık kaynağı değil.)
+    if (rayArmaturu) {
     const armatur = new THREE.Group();
     const govde = new THREE.Mesh(
       new THREE.CylinderGeometry(0.05, 0.07, 0.22, 12),
@@ -1370,13 +1471,6 @@ function tabloOlustur(foto, index, taraf, z, gercekSpot, kayit) {
     armatur.position.set(0, HOL.H - 1.7 - 0.25, 1.15);
     armatur.rotation.x = 0.7;
     grup.add(armatur);
-    }
-
-    if (gercekSpot) {
-      const spot = new THREE.SpotLight(0xffedd2, 16, 8, 0.5, 0.7, 1.7);
-      spot.position.set(0, HOL.H - 1.7 - 0.3, 1.1);
-      spot.target = cerceve;
-      grup.add(spot, spot.target);
     }
 
     // Duvara yerleştir
@@ -2330,12 +2424,21 @@ function vestibulKur(anaGrup, cfg) {
   serit.rotation.x = Math.PI / 2;
   serit.position.set(0, KH - 0.02, mz);
   grup.add(serit);
+  // Tek ışık: koridor yalnızca salon hazır olana kadar görünür, ışık
+  // bütçesini iki lambayla yemeye değmez (bkz. IŞIK BÜTÇESİ notu).
   const isik = new THREE.PointLight(0xfff0d8, 9, 11, 1.6);
   isik.position.set(0, KH - 0.6, mz + 1.5);
   grup.add(isik);
-  const isik2 = new THREE.PointLight(cfg.renk, 4.5, 8, 1.8); // gezinin kimlik rengi
-  isik2.position.set(0, KH - 0.8, mz - 2.6);
-  grup.add(isik2);
+  // Gezinin kimlik rengi: gerçek ışık yerine additive renk yıkaması
+  const renkYikama = new THREE.Mesh(
+    new THREE.PlaneGeometry(KW * 0.9, KH * 0.8),
+    new THREE.MeshBasicMaterial({
+      color: cfg.renk, transparent: true, opacity: 0.16,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    })
+  );
+  renkYikama.position.set(0, KH * 0.45, mz - 2.6);
+  grup.add(renkYikama);
 
   // Koridorun ucu: karanlığa karışan kapanış (devam ediyor hissi)
   const uc = new THREE.Mesh(new THREE.PlaneGeometry(KW, KH),
@@ -2593,7 +2696,7 @@ async function salonYukle(kapi) {
     const hol = holKur(veri.fotograflar.length, veri.baslik, veri.aciklama,
                        veri.fotograflar[0]?.src, suslemeler);
     const L = hol.L;
-    const gercekSpot = veri.fotograflar.length <= 22;
+    const rayArmaturu = veri.fotograflar.length <= 22;
     const kayit = { gezi: id, grup, ry: kapi.ry, kapi, L, W: hol.W, H: hol.H, veri,
                     sakura: null, videowall: null, kalanEser: veri.fotograflar.length };
 
@@ -2601,7 +2704,7 @@ async function salonYukle(kapi) {
     veri.fotograflar.forEach((foto, i) => {
       const taraf = i % 2 === 0 ? -1 : 1;
       const z = L / 2 - 6 - Math.floor(i / 2) * 3.7;
-      tabloOlustur(foto, i, taraf, z, gercekSpot, kayit);
+      tabloOlustur(foto, i, taraf, z, rayArmaturu, kayit);
     });
     videowallKur(veri.fotograflar);
     kayit.videowall = videowall;
@@ -2658,9 +2761,13 @@ async function tumSalonlariKur(ilerleme) {
 function hubKur() {
   const AW = 17, AD = 17, AH = 6.6;
   HUB = { AW, AD, AH, hub: true };
-  scene.fog = new THREE.Fog(0x151210, 16, 50);
-  ekle(new THREE.AmbientLight(0xfff4e0, 0.36));
-  ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.4));
+  // Sis tüm binayı kapsar: atriyum 17 m, en uzun salon 130 m'yi bulabiliyor.
+  // Yakın sınır atriyumun köşegeninden büyük olmalı ki hol içindeyken
+  // duvarlar sisin içinde kalmasın; uzak sınır salonun dibini karanlığa
+  // karıştırıp "koridor devam ediyor" hissini versin.
+  scene.fog = new THREE.Fog(0x151210, 26, 95);
+  ekle(new THREE.AmbientLight(0xfff4e0, 0.42));
+  ekle(new THREE.HemisphereLight(0xfff8ea, 0x35291d, 0.45));
 
   const duvarDoku = sivaDokusu(); duvarDoku.repeat.set(5, 3);
   // Cift yuzlu: sergiden geri bakildiginda hub duvarlari tek yuzlu oldugu
@@ -2916,14 +3023,14 @@ async function baslat() {
   const L = hol.L;
   kanatNesneleri = hol.kanatlar;
 
-  // 22 esere kadar gerçek spot ışığı; üzerinde sahte ışık gölü (performans)
-  const gercekSpot = veri.fotograflar.length <= 22;
+  // 22 esere kadar görünür ray armatürü (yalnızca gövde — bkz. tabloOlustur)
+  const rayArmaturu = veri.fotograflar.length <= 22;
 
   veri.fotograflar.forEach((foto, i) => {
     const taraf = i % 2 === 0 ? -1 : 1;
     const sira = Math.floor(i / 2);
     const z = L / 2 - 6 - sira * 3.7;
-    tabloOlustur(foto, i, taraf, z, gercekSpot);
+    tabloOlustur(foto, i, taraf, z, rayArmaturu);
   });
 
   // Holün sonundaki duvar: tam boy sinevizyon
