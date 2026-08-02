@@ -743,45 +743,52 @@ function holKur(fotoSayisi, baslik, aciklama, arkaSrc) {
   }
 
   // --- Giriş kapısı (Lobi ile hol arası çift kanatlı kapı) ---
-  const kapiGrubu = new THREE.Group();
-  
-  // Kapı kasası (Çerçeve) - Katı blok yerine 3 parça
-  const kasaSol = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
-  kasaSol.position.set(-1.375, 1.725, 0);
-  kapiGrubu.add(kasaSol);
-  
-  const kasaSag = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
-  kasaSag.position.set(1.375, 1.725, 0);
-  kapiGrubu.add(kasaSag);
-  
-  const kasaUst = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.15, 0.22), supurgelikMat);
-  kasaUst.position.set(0, 3.375, 0);
-  kapiGrubu.add(kasaUst);
-  
-  const kapiMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.4, metalness: 0.1 });
+  // TEK BİNA: salon zaten hub'ın kapısının arkasına asılıdır. Salonun kendi
+  // kapısı da kurulursa hub kapısının TAM ÜSTÜNE ikinci bir kapı gelir; o
+  // kapı hub döngüsünde animasyonlanmadığı için sürekli kapalı görünür ve
+  // "kapı açılırken tak diye değişip kapanıyor" hissi doğar. Bu yüzden
+  // tek bina modunda kurulmaz — kapıyı hub sağlar.
   const kanatlar = [];
-  
-  for (const sx of [-1, 1]) {
-    const pivot = new THREE.Group();
-    pivot.position.set(sx * 1.3, 1.66, 0.09); // Menteşe noktası
-    
-    const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.30, 3.28, 0.08), kapiMat);
-    kanat.position.set(-sx * 0.65, 0, 0); // Menteşeye göre kanat konumu
-    pivot.add(kanat);
-    
-    const kol = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 12, 8),
-      new THREE.MeshStandardMaterial({ color: 0xb08d3e, roughness: 0.2, metalness: 0.95 })
-    );
-    kol.position.set(-sx * 1.18, -0.11, 0.06); // Menteşeye göre kol konumu
-    pivot.add(kol);
-    
-    kapiGrubu.add(pivot);
-    kanatlar.push({ pivot, sx });
-  }
+  if (!TEK_BINA) {
+    const kapiGrubu = new THREE.Group();
 
-  kapiGrubu.position.set(0, 0, L / 2);
-  ekle(kapiGrubu);
+    // Kapı kasası (Çerçeve) - Katı blok yerine 3 parça
+    const kasaSol = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
+    kasaSol.position.set(-1.375, 1.725, 0);
+    kapiGrubu.add(kasaSol);
+
+    const kasaSag = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.45, 0.22), supurgelikMat);
+    kasaSag.position.set(1.375, 1.725, 0);
+    kapiGrubu.add(kasaSag);
+
+    const kasaUst = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.15, 0.22), supurgelikMat);
+    kasaUst.position.set(0, 3.375, 0);
+    kapiGrubu.add(kasaUst);
+
+    const kapiMat = new THREE.MeshStandardMaterial({ map: cevizDoku, roughness: 0.4, metalness: 0.1 });
+
+    for (const sx of [-1, 1]) {
+      const pivot = new THREE.Group();
+      pivot.position.set(sx * 1.3, 1.66, 0.09); // Menteşe noktası
+
+      const kanat = new THREE.Mesh(new THREE.BoxGeometry(1.30, 3.28, 0.08), kapiMat);
+      kanat.position.set(-sx * 0.65, 0, 0); // Menteşeye göre kanat konumu
+      pivot.add(kanat);
+
+      const kol = new THREE.Mesh(
+        new THREE.SphereGeometry(0.045, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0xb08d3e, roughness: 0.2, metalness: 0.95 })
+      );
+      kol.position.set(-sx * 1.18, -0.11, 0.06); // Menteşeye göre kol konumu
+      pivot.add(kol);
+
+      kapiGrubu.add(pivot);
+      kanatlar.push({ pivot, sx });
+    }
+
+    kapiGrubu.position.set(0, 0, L / 2);
+    ekle(kapiGrubu);
+  }
 
   // Not: Orta hattaki banklar kaldırıldı — döngülü tur tam o hattan
   // yürüyor, içlerinden geçmek yanılsamayı bozuyordu. Zemin artık
