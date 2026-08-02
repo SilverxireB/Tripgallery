@@ -229,6 +229,33 @@ kbd {
 
 .kapi-ipucu.gorunur { opacity: 1; }
 
+/* Arka planda sergi kurulurken bilgilendirme: kısa takılmalar hata
+   gibi algılanmasın diye ne olduğunu söyler. */
+.hazirlik {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(10, 8, 6, 0.62);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.hazirlik.gorunur { opacity: 1; }
+
+/* Mobilde joystick alt ortada: rozet onunla çakışmasın */
+@media (pointer: coarse) {
+  .hazirlik { bottom: auto; top: 74px; }
+}
+
 /* ===== Lightbox ===== */
 #lightbox { z-index: 60; }
 
