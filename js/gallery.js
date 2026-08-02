@@ -69,7 +69,7 @@ const TEMALAR = {
     isiklikDeseni: null,
     plaketMuhru: false,
     slogan: "— ÇÖLÜN HAFIZASI —",
-    dekor: { sfenks: true, mesale: true },
+    dekor: { stel: true, mesale: true },
   },
   bali: {
     // Bali'nin çiçeği frangipani: yere düşüp birikir.
@@ -419,6 +419,219 @@ function khomLoiDokusu() {
   return t;
 }
 
+// Mısır steli: kireç taşı levhaya oyulmuş hiyeroglif sütunları.
+// Bilinçli olarak dokuya dayanıyor — kutu geometrisinden yontulan heykeller
+// yakından bakınca oyuncak gibi duruyor, oysa düz bir levhanın üstündeki
+// çizim kabartma yanılsamasını uzaktan da yakından da koruyor.
+function stelDokusu() {
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 1024;
+  const x = c.getContext("2d");
+
+  // Kireç taşı zemin + damar
+  x.fillStyle = "#cdb489";
+  x.fillRect(0, 0, 512, 1024);
+  for (let i = 0; i < 2600; i++) {
+    const r = Math.random();
+    x.fillStyle = r < 0.5 ? "rgba(255,246,224,0.16)" : "rgba(120,98,64,0.13)";
+    x.fillRect(Math.random() * 512, Math.random() * 1024, 1 + Math.random() * 3, 1 + Math.random() * 2);
+  }
+
+  // Oyma yanılsaması: her işaret iki kez çizilir. Önce bir tık aşağı
+  // kaydırılmış AÇIK kopya (oyuğun ışık alan alt dudağı), sonra üstüne
+  // koyu asıl oyuk. Bu yüzden çizim rengi değişken.
+  const OYUK_KOYU = "#7d6236";
+  const OYUK_ACIK = "#fff3d8";
+  let OYUK = OYUK_KOYU;
+  const KENAR = "rgba(255,247,226,0.75)";
+
+  // Çift çerçeve (kabartma bordür)
+  x.strokeStyle = OYUK; x.lineWidth = 7;
+  x.strokeRect(26, 26, 460, 972);
+  x.lineWidth = 2.5;
+  x.strokeRect(44, 44, 424, 936);
+
+  // --- Üst alınlık: kanatlı güneş kursu ---
+  const kursY = 118;
+  x.save();
+  x.fillStyle = OYUK;
+  // kanatlar
+  for (const yon of [-1, 1]) {
+    x.beginPath();
+    x.moveTo(256 + yon * 26, kursY);
+    x.quadraticCurveTo(256 + yon * 120, kursY - 30, 256 + yon * 196, kursY - 6);
+    x.quadraticCurveTo(256 + yon * 120, kursY + 6, 256 + yon * 96, kursY + 30);
+    x.quadraticCurveTo(256 + yon * 70, kursY + 14, 256 + yon * 26, kursY + 16);
+    x.closePath(); x.fill();
+    // tüy çizgileri
+    x.strokeStyle = "rgba(205,180,137,0.85)"; x.lineWidth = 2;
+    for (let i = 1; i < 7; i++) {
+      const t = i / 7;
+      x.beginPath();
+      x.moveTo(256 + yon * (30 + t * 160), kursY - 16 + t * 8);
+      x.lineTo(256 + yon * (34 + t * 150), kursY + 6 + t * 16);
+      x.stroke();
+    }
+  }
+  // güneş kursu + iki kobra
+  x.fillStyle = "#8a6a33";
+  x.beginPath(); x.arc(256, kursY, 30, 0, Math.PI * 2); x.fill();
+  x.fillStyle = OYUK;
+  for (const yon of [-1, 1]) {
+    x.beginPath();
+    x.moveTo(256 + yon * 12, kursY + 26);
+    x.quadraticCurveTo(256 + yon * 40, kursY + 34, 256 + yon * 34, kursY + 60);
+    x.quadraticCurveTo(256 + yon * 20, kursY + 44, 256 + yon * 6, kursY + 44);
+    x.closePath(); x.fill();
+  }
+  x.restore();
+
+  // Alınlığı gövdeden ayıran çizgi
+  x.strokeStyle = OYUK; x.lineWidth = 4;
+  x.beginPath(); x.moveTo(60, 208); x.lineTo(452, 208); x.stroke();
+
+  // --- Hiyeroglif sütunları ---
+  // Küçük bir işaret dağarcığı: uzaktan bakınca "yazı" olarak okunur,
+  // yakından da her biri tanınır bir silüettir.
+  const isaretler = [
+    (a, b, s) => { // ankh
+      x.lineWidth = s * 0.14; x.strokeStyle = OYUK;
+      x.beginPath(); x.ellipse(a, b - s * 0.26, s * 0.2, s * 0.24, 0, 0, Math.PI * 2); x.stroke();
+      x.beginPath(); x.moveTo(a, b - s * 0.02); x.lineTo(a, b + s * 0.46); x.stroke();
+      x.beginPath(); x.moveTo(a - s * 0.28, b + s * 0.04); x.lineTo(a + s * 0.28, b + s * 0.04); x.stroke();
+    },
+    (a, b, s) => { // su (n): üç dalga
+      x.lineWidth = s * 0.1; x.strokeStyle = OYUK;
+      for (let k = -1; k <= 1; k++) {
+        x.beginPath();
+        x.moveTo(a - s * 0.34, b + k * s * 0.22);
+        for (let i = 0; i < 3; i++) {
+          x.quadraticCurveTo(a - s * 0.34 + s * 0.11 + i * s * 0.23, b + k * s * 0.22 - s * 0.12,
+                             a - s * 0.34 + s * 0.23 + i * s * 0.23, b + k * s * 0.22);
+        }
+        x.stroke();
+      }
+    },
+    (a, b, s) => { // Horus gözü
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a - s * 0.36, b);
+      x.quadraticCurveTo(a, b - s * 0.3, a + s * 0.34, b - s * 0.04);
+      x.quadraticCurveTo(a, b + s * 0.24, a - s * 0.36, b);
+      x.closePath(); x.fill();
+      x.fillStyle = "#cdb489";
+      x.beginPath(); x.arc(a + s * 0.02, b - s * 0.03, s * 0.09, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = OYUK; x.lineWidth = s * 0.08;
+      x.beginPath(); x.moveTo(a + s * 0.1, b + s * 0.14); x.lineTo(a + s * 0.02, b + s * 0.42); x.stroke();
+    },
+    (a, b, s) => { // kuş (şahin silüeti)
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a - s * 0.34, b + s * 0.2);
+      x.quadraticCurveTo(a - s * 0.1, b - s * 0.12, a + s * 0.22, b - s * 0.2);
+      x.quadraticCurveTo(a + s * 0.4, b - s * 0.22, a + s * 0.36, b - s * 0.08);
+      x.quadraticCurveTo(a + s * 0.1, b + s * 0.06, a - s * 0.1, b + s * 0.3);
+      x.closePath(); x.fill();
+      x.lineWidth = s * 0.07; x.strokeStyle = OYUK;
+      x.beginPath(); x.moveTo(a - s * 0.08, b + s * 0.28); x.lineTo(a - s * 0.08, b + s * 0.46); x.stroke();
+      x.beginPath(); x.moveTo(a + s * 0.06, b + s * 0.24); x.lineTo(a + s * 0.06, b + s * 0.46); x.stroke();
+    },
+    (a, b, s) => { // maat tüyü
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a, b - s * 0.44);
+      x.quadraticCurveTo(a + s * 0.2, b - s * 0.1, a + s * 0.06, b + s * 0.44);
+      x.quadraticCurveTo(a - s * 0.14, b - s * 0.06, a, b - s * 0.44);
+      x.closePath(); x.fill();
+    },
+    (a, b, s) => { // sepet (nb)
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a - s * 0.36, b - s * 0.06);
+      x.quadraticCurveTo(a, b + s * 0.34, a + s * 0.36, b - s * 0.06);
+      x.quadraticCurveTo(a, b + s * 0.06, a - s * 0.36, b - s * 0.06);
+      x.closePath(); x.fill();
+    },
+    (a, b, s) => { // güneş kursu (ra)
+      x.strokeStyle = OYUK; x.lineWidth = s * 0.11;
+      x.beginPath(); x.arc(a, b, s * 0.26, 0, Math.PI * 2); x.stroke();
+      x.fillStyle = OYUK;
+      x.beginPath(); x.arc(a, b, s * 0.08, 0, Math.PI * 2); x.fill();
+    },
+    (a, b, s) => { // saz yaprağı (i)
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a, b + s * 0.46);
+      x.lineTo(a - s * 0.06, b - s * 0.16);
+      x.quadraticCurveTo(a, b - s * 0.5, a + s * 0.12, b - s * 0.2);
+      x.lineTo(a + s * 0.05, b + s * 0.46);
+      x.closePath(); x.fill();
+    },
+    (a, b, s) => { // ağız (r)
+      x.fillStyle = OYUK;
+      x.beginPath(); x.ellipse(a, b, s * 0.34, s * 0.1, 0, 0, Math.PI * 2); x.fill();
+    },
+    (a, b, s) => { // oturan figür
+      x.fillStyle = OYUK;
+      x.beginPath(); x.arc(a - s * 0.04, b - s * 0.3, s * 0.12, 0, Math.PI * 2); x.fill();
+      x.beginPath();
+      x.moveTo(a - s * 0.16, b - s * 0.16);
+      x.lineTo(a + s * 0.04, b - s * 0.16);
+      x.lineTo(a + s * 0.1, b + s * 0.2);
+      x.lineTo(a + s * 0.34, b + s * 0.2);
+      x.lineTo(a + s * 0.34, b + s * 0.34);
+      x.lineTo(a - s * 0.16, b + s * 0.34);
+      x.closePath(); x.fill();
+    },
+    (a, b, s) => { // sunak / kâse
+      x.fillStyle = OYUK;
+      x.fillRect(a - s * 0.3, b + s * 0.1, s * 0.6, s * 0.12);
+      x.beginPath();
+      x.moveTo(a - s * 0.22, b + s * 0.1);
+      x.quadraticCurveTo(a, b - s * 0.36, a + s * 0.22, b + s * 0.1);
+      x.closePath(); x.fill();
+    },
+    (a, b, s) => { // kobra
+      x.fillStyle = OYUK;
+      x.beginPath();
+      x.moveTo(a - s * 0.3, b + s * 0.4);
+      x.quadraticCurveTo(a + s * 0.26, b + s * 0.3, a + s * 0.04, b - s * 0.08);
+      x.quadraticCurveTo(a - s * 0.14, b - s * 0.42, a + s * 0.2, b - s * 0.34);
+      x.quadraticCurveTo(a + s * 0.02, b - s * 0.2, a + s * 0.18, b - s * 0.02);
+      x.quadraticCurveTo(a + s * 0.44, b + s * 0.34, a - s * 0.3, b + s * 0.46);
+      x.closePath(); x.fill();
+    },
+  ];
+
+  const SUT = 4, sutGen = 392 / SUT, ustY = 232, altY = 966;
+  const satirY = 74;
+  for (let s = 0; s < SUT; s++) {
+    const cx = 60 + sutGen * (s + 0.5);
+    // sütunları ayıran oyuk çizgi
+    if (s > 0) {
+      x.strokeStyle = OYUK; x.lineWidth = 3;
+      x.beginPath(); x.moveTo(60 + sutGen * s, ustY); x.lineTo(60 + sutGen * s, altY); x.stroke();
+      x.strokeStyle = KENAR; x.lineWidth = 1.2;
+      x.beginPath(); x.moveTo(61.5 + sutGen * s, ustY); x.lineTo(61.5 + sutGen * s, altY); x.stroke();
+    }
+    for (let y = ustY + satirY * 0.6; y < altY - 20; y += satirY) {
+      const ciz = isaretler[Math.floor(Math.random() * isaretler.length)];
+      const boy = sutGen * 0.62;
+      x.save(); x.translate(1.6, 2.8); x.globalAlpha = 0.6;
+      OYUK = OYUK_ACIK;
+      ciz(cx, y, boy);
+      x.restore();
+      OYUK = OYUK_KOYU;
+      ciz(cx, y, boy);
+    }
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 function sarmasikDokusu() {
   // Sarkan sarmaşık teli: ince sap + iki yana dizilmiş yapraklar. Alfa'lı
   // olduğu için düz yeşil şerit yerine gerçekten bitki siluetine benziyor.
@@ -458,16 +671,48 @@ function sarmasikDokusu() {
 }
 
 function tozDokusu() {
-  // Çöl tozu: ışıkta parlayan yumuşak altın zerre
+  // Çöl tozu: rüzgârda savrulan zerre. Yuvarlak bir nokta yerine hafif
+  // uzamış bir iz — sürüklendiği yön böyle okunuyor.
   const c = document.createElement("canvas");
-  c.width = c.height = 32;
+  c.width = 64; c.height = 32;
   const x = c.getContext("2d");
-  const g = x.createRadialGradient(16, 16, 0, 16, 16, 15);
-  g.addColorStop(0, "rgba(255, 236, 190, 0.95)");
-  g.addColorStop(0.4, "rgba(230, 200, 140, 0.35)");
-  g.addColorStop(1, "rgba(220, 190, 130, 0)");
+  // Sıcak kum rengi, beyaz çekirdek YOK: additive değil normal karışımla
+  // çizildiği için aydınlık salonda beyaz benek gibi patlamıyor, görüntüyü
+  // kum rengine boyuyor.
+  const g = x.createRadialGradient(32, 16, 0, 32, 16, 30);
+  g.addColorStop(0, "rgba(206, 170, 112, 0.85)");
+  g.addColorStop(0.3, "rgba(198, 163, 108, 0.42)");
+  g.addColorStop(1, "rgba(190, 158, 106, 0)");
   x.fillStyle = g;
-  x.fillRect(0, 0, 32, 32);
+  x.save(); x.translate(32, 16); x.scale(1, 0.5); x.translate(-32, -16);
+  x.fillRect(0, 0, 64, 32);
+  x.restore();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function kumBirikintiDokusu() {
+  // Yerde biriken kum: tek tek zerre değil, kenarları dağılan yumuşak bir
+  // öbek. Üst üste bindikçe zeminde savrulmuş kum tabakasına dönüşüyor.
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 32);
+  g.addColorStop(0, "rgba(226, 201, 152, 0.85)");
+  g.addColorStop(0.4, "rgba(214, 187, 137, 0.42)");
+  g.addColorStop(0.75, "rgba(208, 180, 130, 0.12)");
+  g.addColorStop(1, "rgba(206, 178, 128, 0)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  // Kenarlarda tanecik: düz bir leke gibi durmasın. Öbeğin dış kenarına
+  // taşmamalı, yoksa yan yana gelen karolar kare kenarı gösteriyor.
+  for (let i = 0; i < 220; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 4 + Math.random() * 19;
+    x.fillStyle = `rgba(198, 170, 120, ${0.45 - r / 60})`;
+    x.fillRect(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 1.5, 1.5);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -993,18 +1238,22 @@ function parcacikKur({ W, L, H }) {
   const cicek = TEMA.parcaciklar === "plumeria";
   const parcaDoku = parcacikDokusu();
   const adet = yukselen ? Math.min(70, Math.floor(L * 0.9))
-             : toz ? Math.min(500, Math.floor(L * 5))
+             : toz ? Math.min(900, Math.floor(L * 18))
              : cicek ? Math.min(280, Math.floor(L * 4))
              : Math.min(1200, Math.floor(L * 10));
-  const boy = yukselen ? 0.32 : toz ? 0.05 : cicek ? 0.19 : 0.085;
-  const yaprakGeo = new THREE.PlaneGeometry(boy, boy);
+  // Toz zerresi tek başına görünmüyordu: 5 cm'lik nokta, üstelik yalnızca
+  // 200 tane. Fırtına olması için hem çok daha kalabalık hem daha iri.
+  const boy = yukselen ? 0.32 : toz ? 0.16 : cicek ? 0.19 : 0.085;
+  const yaprakGeo = new THREE.PlaneGeometry(toz ? boy * 1.9 : boy, boy);
   const yaprakMat = new THREE.MeshBasicMaterial({
     map: parcaDoku,
     transparent: true,
-    opacity: yukselen ? 0.5 : toz ? 0.55 : 0.92,   // fener/toz arka planda kalsın
+    opacity: yukselen ? 0.5 : toz ? 0.55 : 0.92,   // fener arka planda kalsın
     depthWrite: false,
     side: THREE.DoubleSide,
-    blending: (yukselen || toz) ? THREE.AdditiveBlending : THREE.NormalBlending, // ışıldasın
+    // Fener ışık kaynağı, additive parlar. Kum ise ışık değil MADDE:
+    // additive çizilince aydınlık salonda beyaz benek gibi patlıyordu.
+    blending: yukselen ? THREE.AdditiveBlending : THREE.NormalBlending,
   });
   const yapraklar = new THREE.InstancedMesh(yaprakGeo, yaprakMat, adet);
   yapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -1018,15 +1267,20 @@ function parcacikKur({ W, L, H }) {
       y: Math.random() * H,
       z: (Math.random() - 0.5) * (L - 2),
       dusme: yukselen ? 0.16 + Math.random() * 0.2   // yükseliş hızı (m/sn)
-           : toz ? 0.02 + Math.random() * 0.05        // toz neredeyse asılı durur
+           : toz ? 0.1 + Math.random() * 0.3          // kum savrularak alçalır
            : cicek ? 0.09 + Math.random() * 0.11      // çiçek ağır ağır iner
            : 0.12 + Math.random() * 0.22,             // düşüş hızı
+      // Fırtınanın yatay sürüklenmesi: yalnızca tozda var, salon boyunca
+      // eser. Hepsi aynı yöne gittiği için havada bir akış okunuyor.
+      ruzgar: toz ? 1.5 + Math.random() * 2.6 : 0,
       sallanma: yukselen ? 0.15 + Math.random() * 0.25
               : cicek ? 0.2 + Math.random() * 0.3
+              : toz ? 0.8 + Math.random() * 1.6
               : 0.4 + Math.random() * 0.7,
       faz: Math.random() * Math.PI * 2,
       donme: yukselen ? (Math.random() - 0.5) * 0.25
            : cicek ? (Math.random() - 0.5) * 0.7      // fırıldak gibi yavaş döner
+           : toz ? 0                                   // iz rüzgâr yönünde yatay kalır
            : (Math.random() - 0.5) * 2.2,
       egim: Math.random() * Math.PI * 2,
     });
@@ -1034,26 +1288,57 @@ function parcacikKur({ W, L, H }) {
   ekle(yapraklar);
 
   let yerdeYapraklar = null;
-  if (!yukselen && !toz) {
-    // --- Yere düşen yaprakların biriktiği katman ---
-    // Zemin boş başlar: her yaprak tavandan doğar, süzülür ve yere değdiği
-    // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla çiçekle örtülür.
-    const YERDE_KAPASITE = cicek ? 4000 : 24000;
+  if (!yukselen) {
+    // --- Yere düşenlerin biriktiği katman ---
+    // Zemin boş başlar: her parça tavandan doğar, süzülür ve yere değdiği
+    // noktada bu katmana "yapışır" — kaybolmaz, salon zamanla örtülür.
+    // Mısır'da biriken şey kum: tek tek zerre değil, kenarları dağılan
+    // yumuşak öbekler; üst üste bindikçe savrulmuş kum tabakası oluyor.
+    const YERDE_KAPASITE = toz ? 6000 : cicek ? 4000 : 24000;
+    const yerdeBoy = toz ? 0.62 : cicek ? 0.18 : 0.09;
     yerdeYapraklar = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(cicek ? 0.18 : 0.09, cicek ? 0.18 : 0.09),
+      new THREE.PlaneGeometry(yerdeBoy, yerdeBoy),
       new THREE.MeshBasicMaterial({
-        map: parcaDoku, transparent: true, opacity: 0.85,
+        map: toz ? kumBirikintiDokusu() : parcaDoku,
+        transparent: true, opacity: toz ? 0.68 : 0.85,
         depthWrite: false, side: THREE.DoubleSide,
       }),
       YERDE_KAPASITE
     );
     yerdeYapraklar.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     yerdeYapraklar.frustumCulled = false;
-    yerdeYapraklar.count = 0; // boş başlar, düşen her yaprakla artar
+    yerdeYapraklar.count = 0; // boş başlar, düşen her parçayla artar
     ekle(yerdeYapraklar);
   }
 
-  sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0, yukselen };
+  sakura = { mesh: yapraklar, parcalar, yerde: yerdeYapraklar, yerdeSayi: 0, yukselen, toz };
+
+  // Kum salona ZİYARETÇİDEN ÖNCE dolmuş olmalı: çiçek yaprağı gözünün
+  // önünde düşerken güzel, kum ise "yıllardır esiyor" hissi vermeli.
+  // Bu yüzden zemin duvar diplerinde hazır bir kum tabakasıyla başlar,
+  // fırtına onun üstüne eklemeyi sürdürür.
+  if (toz && yerdeYapraklar) {
+    const tohum = Math.min(1800, Math.floor(L * 34));
+    for (let i = 0; i < tohum; i++) {
+      // Duvar dibine doğru toplanmış, ortaya doğru seyrelen dağılım
+      const yan = Math.random() < 0.5 ? -1 : 1;
+      const kenarPay = Math.pow(Math.random(), 2.1);   // 0 = duvar dibi
+      _yaprakPoz.set(
+        yan * (W / 2 - 0.3 - kenarPay * (W / 2 - 0.9)),
+        0.015 + Math.random() * 0.03,
+        (Math.random() - 0.5) * (L - 3)
+      );
+      _yaprakDonus.set(-Math.PI / 2, Math.random() * Math.PI * 2, 0);
+      _yaprakQ.setFromEuler(_yaprakDonus);
+      _yaprakOlcek.setScalar(0.7 + Math.random() * 0.9);
+      _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
+      yerdeYapraklar.setMatrixAt(i, _yaprakMatrisi);
+    }
+    sakura.yerdeSayi = tohum;
+    yerdeYapraklar.count = tohum;
+    yerdeYapraklar.instanceMatrix.needsUpdate = true;
+    _yaprakOlcek.setScalar(1);
+  }
   }
 }
 
@@ -1144,86 +1429,50 @@ function dekorKur({ W, L, H }) {
 
   // === MISIR ===
 
-  // --- Sfenks heykelleri (dromos: yolun iki yanında, birbirine bakan çift) ---
-  // Not: burada eskiden tavana kadar çıkan papirüs sütunları vardı. Salon
-  // yalnızca 7.8 m geniş; sütunlar duvardaki eserlerin tam önüne denk gelip
-  // tabloyu kapatıyordu. Sfenks alçak (~0.95 m) olduğu için hiçbir eseri
-  // kapatmaz, üstelik Mısır'ın en tanınan silueti.
-  if (d.sfenks) {
-    const tas = new THREE.MeshStandardMaterial({ color: 0xd2b986, roughness: 0.95 });
-    const tasKoyu = new THREE.MeshStandardMaterial({ color: 0xb59a69, roughness: 0.95 });
-    const altin = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.38, metalness: 0.75 });
-    const lapis = new THREE.MeshStandardMaterial({ color: 0x1f3f7a, roughness: 0.6 });
+  // --- Hiyeroglif stelleri (duvara dayalı dikili taş levhalar) ---
+  // Buraya önce tavana kadar papirüs sütunları, sonra sfenks heykelleri
+  // kondu; ikisi de kutu geometrisinden yontulduğu için oyuncak gibi
+  // duruyordu. Stel bilinçli olarak DÜZ bir levha: bütün detay dokudaki
+  // oyma hiyerogliflerden geliyor, o yüzden yakından da elle yontulmuş
+  // duruyor. Duvara dayalı olduğu için hiçbir eserin önünü de kapatmıyor.
+  if (d.stel) {
+    const stelDoku = stelDokusu();
+    const tas = new THREE.MeshStandardMaterial({ color: 0xc8b088, roughness: 0.95 });
+    const tasKoyu = new THREE.MeshStandardMaterial({ color: 0xa8916a, roughness: 0.95 });
+    const yuzMat = new THREE.MeshStandardMaterial({ map: stelDoku, roughness: 0.9 });
+    const altin = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.4, metalness: 0.7 });
+    // BoxGeometry yüz sırası: +x, -x, +y, -y, +z, -z — yalnızca ön yüz oymalı
+    const govdeMat = [tas, tas, tas, tas, yuzMat, tas];
 
-    const sfenksYap = () => {
-      // +z yönüne bakar; kaide dahil toplam yükseklik ~0.95 m
+    const stelYap = () => {
       const g = new THREE.Group();
-      const kaide = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.16, 2.05), tasKoyu);
-      kaide.position.y = 0.08; g.add(kaide);
-
-      // Gövde: arkada yüksek sağrı, öne doğru alçalan sırt
-      const sagri = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.46, 0.95), tas);
-      sagri.position.set(0, 0.39, -0.5); g.add(sagri);
-      const bel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.36, 0.6), tas);
-      bel.position.set(0, 0.34, 0.15); g.add(bel);
-
-      // Uzanmış ön ayaklar
-      for (const sx of [-1, 1]) {
-        const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 1.15), tas);
-        bacak.position.set(sx * 0.19, 0.26, 0.62); g.add(bacak);
-        const pence = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.17, 0.26), tas);
-        pence.position.set(sx * 0.19, 0.245, 1.22); g.add(pence);
-        // arka pençe (kıvrılmış)
-        const arka = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.5), tas);
-        arka.position.set(sx * 0.23, 0.27, -0.72); g.add(arka);
-      }
-      // Kuyruk: sağ böğürde kıvrılan ince şerit
-      const kuyruk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.75), tas);
-      kuyruk.position.set(0.3, 0.2, -0.62); kuyruk.rotation.y = 0.5; g.add(kuyruk);
-
-      // Göğüs: başı taşıyan yükselti
-      const gogus = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.44, 0.4), tas);
-      gogus.position.set(0, 0.52, 0.42); g.add(gogus);
-
-      // Baş + nemes başlığı. Heykel bütünüyle taş: altın yalnızca alın
-      // bandında ve sakalda: baştan aşağı yaldız, müze heykelinden çok
-      // hediyelik eşya gibi duruyordu.
-      const bas = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.28), tas);
-      bas.position.set(0, 0.85, 0.5); g.add(bas);
-      const nemes = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.34, 0.24), tasKoyu);
-      nemes.position.set(0, 0.86, 0.42); g.add(nemes);
-      const nemesTepe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.12, 0.3), tasKoyu);
-      nemesTepe.position.set(0, 1.02, 0.46); g.add(nemesTepe);
-      for (const sx of [-1, 1]) {
-        // omuza inen nemes kanadı
-        const kanat = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.32, 0.22), tasKoyu);
-        kanat.position.set(sx * 0.23, 0.7, 0.47);
-        kanat.rotation.z = sx * 0.12; g.add(kanat);
-      }
-      // Yüz: başlığın önünden çıkan taş yüzey
-      const yuz = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.1), tas);
-      yuz.position.set(0, 0.84, 0.63); g.add(yuz);
-      // Alın bandı: nemes'in ön kenarındaki ince yaldız şerit
-      const band = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.055, 0.16), altin);
-      band.position.set(0, 0.985, 0.55); g.add(band);
-      // Alında uraeus (kobra)
-      const uraeus = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.11, 0.06), lapis);
-      uraeus.position.set(0, 1.02, 0.59); g.add(uraeus);
-      // Çene sakalı
-      const sakal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.17, 0.08), altin);
-      sakal.position.set(0, 0.67, 0.62); g.add(sakal);
+      const kaide = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.15, 0.42), tasKoyu);
+      kaide.position.y = 0.075; g.add(kaide);
+      const govde = new THREE.Mesh(new THREE.BoxGeometry(0.86, 1.9, 0.2), govdeMat);
+      govde.position.set(0, 1.1, 0.02); g.add(govde);
+      // Torus silmesi: Mısır mimarisinin klasik yuvarlak bileziği
+      const silme = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.96, 10), tasKoyu);
+      silme.rotation.z = Math.PI / 2;
+      silme.position.set(0, 2.08, 0.05); g.add(silme);
+      // Cavetto korniş: gövdeden bir tık taşan saçak + ince kapak taşı
+      const kornis = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.19, 0.27), tasKoyu);
+      kornis.position.set(0, 2.21, 0.04); g.add(kornis);
+      const kapak = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.05, 0.31), tasKoyu);
+      kapak.position.set(0, 2.33, 0.04); g.add(kapak);
+      // Korniş altındaki ince yaldız şerit
+      const serit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.035, 0.22), altin);
+      serit.position.set(0, 2.0, 0.03); g.add(serit);
       return g;
     };
 
-    // Girişte bir çift; salon uzunsa ortada bir çift daha. İkisi de iki
-    // eserin ARASINA denk gelir, hiçbir tablonun önünü kapatmaz.
-    const zNoktalari = [L / 2 - 3.4];
-    if (L > 34) zNoktalari.push(L / 2 - 6 - 4.5 * 3.7);
-    for (const z of zNoktalari) {
+    // Eserler 3.7 m aralıkla asılı; steller iki eserin TAM ORTASINA gelir.
+    // Meşaleler k = 1.5, 4.5, 7.5'te olduğu için steller 0.5, 3.5, 6.5'te.
+    for (let k = 0.5; k * 3.7 < L - 13; k += 3) {
       for (const sx of [-1, 1]) {
-        const s = sfenksYap();
-        s.position.set(sx * 2.75, 0, z);
-        s.rotation.y = -sx * Math.PI / 2;  // yola, yani birbirlerine bakarlar
+        const s = stelYap();
+        s.position.set(sx * (W / 2 - 0.13), 0, L / 2 - 6 - k * 3.7);
+        // Oymalı yüz (+z) salonun içine baksın: sol duvarda +x, sağda -x.
+        s.rotation.y = -sx * Math.PI / 2;
         ekle(s);
       }
     }
@@ -1939,21 +2188,29 @@ function yereBirak(p) {
   const yerde = sakura.yerde;
   const kapasite = yerde.instanceMatrix.count;
   const idx = sakura.yerdeSayi % kapasite;
+  let bx = THREE.MathUtils.clamp(
+    p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
+    -(HOL.W / 2 - 0.1), HOL.W / 2 - 0.1
+  );
+  // Kum rüzgârla süpürülür: ortada tutunamaz, duvar diplerinde yığılır.
+  // Çiçek yaprağı düştüğü yerde kalır, ona dokunulmuyor.
+  if (sakura.toz) {
+    const duvar = (HOL.W / 2 - 0.35) * Math.sign(bx || 1);
+    bx = THREE.MathUtils.lerp(bx, duvar, 0.45 + Math.random() * 0.4);
+  }
   _yaprakPoz.set(
-    THREE.MathUtils.clamp(
-      p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
-      -(HOL.W / 2 - 0.1), HOL.W / 2 - 0.1
-    ),
+    bx,
     0.015 + Math.random() * 0.03, // hafif yükseklik farkı: üst üste binince titreşim olmasın
     p.z + Math.cos(zaman * p.sallanma * 0.8 + p.faz) * 0.2
   );
   _yaprakDonus.set(
-    -Math.PI / 2 + (Math.random() - 0.5) * 0.22, // yere serili, ucu belli belirsiz kalkık
+    // Kum tabakası yere yapışık; yaprağın ucu belli belirsiz kalkık durur
+    -Math.PI / 2 + (sakura.toz ? 0 : (Math.random() - 0.5) * 0.22),
     Math.random() * Math.PI * 2,
-    (Math.random() - 0.5) * 0.18
+    sakura.toz ? 0 : (Math.random() - 0.5) * 0.18
   );
   _yaprakQ.setFromEuler(_yaprakDonus);
-  _yaprakOlcek.setScalar(0.85 + Math.random() * 0.35);
+  _yaprakOlcek.setScalar(sakura.toz ? 0.7 + Math.random() * 0.9 : 0.85 + Math.random() * 0.35);
   _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
   yerde.setMatrixAt(idx, _yaprakMatrisi);
   // Kısmi yükleme: her inişte 24k'lık buffer'ın tamamı değil,
@@ -2000,28 +2257,33 @@ function sakuraGuncelle(dt) {
     }
 
     p.y -= p.dusme * dt;
+    // Kum fırtınası: zerreler salon boyunca aynı yöne sürüklenir. Salonun
+    // ucuna varan zerre öbür uçtan geri girer, akış hiç kesilmez.
+    if (p.ruzgar) {
+      p.z -= p.ruzgar * dt;
+      if (p.z < -(HOL.L / 2 - 1)) p.z = HOL.L / 2 - 1;
+    }
     if (p.y < 0.05) {
-      // Yere inen yaprak düştüğü yerde kalır, birikintiye eklenir. Toz gibi
-      // birikinti katmanı olmayan temalarda böyle bir katman yok: zerre
-      // yalnızca yeniden yukarıdan doğar, havada asılı kalmayı sürdürür.
+      // Yere inen parça düştüğü yerde kalır, birikintiye eklenir…
       if (sakura.yerde) yereBirak(p);
-      // …ve gökyüzünden yepyeni bir yaprak doğar
+      // …ve gökyüzünden yepyeni bir parça doğar
       p.y = HOL.H - 0.3;
       p.x = (Math.random() - 0.5) * HOL.W * 0.9;
       p.z = (Math.random() - 0.5) * (HOL.L - 2);
       p.faz = Math.random() * Math.PI * 2;
-      p.dusme = 0.12 + Math.random() * 0.22;
+      p.dusme = p.ruzgar ? 0.1 + Math.random() * 0.3 : 0.12 + Math.random() * 0.22;
     }
     _yaprakOlcek.setScalar(1);
     _yaprakPoz.set(
-      p.x + Math.sin(zaman * p.sallanma + p.faz) * 0.35,
+      p.x + Math.sin(zaman * p.sallanma + p.faz) * (p.ruzgar ? 0.18 : 0.35),
       p.y,
       p.z + Math.cos(zaman * p.sallanma * 0.8 + p.faz) * 0.2
     );
+    // Toz izi yatay kalır (yalnızca rüzgârda hafifçe kıvrılır); yaprak takla atar
     _yaprakDonus.set(
-      zaman * p.donme + p.faz,
-      p.egim + Math.sin(zaman * 0.6 + p.faz) * 0.6,
-      p.faz
+      p.ruzgar ? 0 : zaman * p.donme + p.faz,
+      p.ruzgar ? Math.sin(zaman * 0.7 + p.faz) * 0.25 : p.egim + Math.sin(zaman * 0.6 + p.faz) * 0.6,
+      p.ruzgar ? Math.sin(zaman * 1.4 + p.faz) * 0.12 : p.faz
     );
     _yaprakQ.setFromEuler(_yaprakDonus);
     _yaprakMatrisi.compose(_yaprakPoz, _yaprakQ, _yaprakOlcek);
