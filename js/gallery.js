@@ -29,7 +29,7 @@ const GEZILER = [
   { id: "japonya", ad: "Japonya", altbaslik: "2026",   renk: 0xbf2b25, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
   { id: "tayland", ad: "Tayland", altbaslik: "2026",   renk: 0xd9a441, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
   { id: "bali",    ad: "Bali",    altbaslik: "2026",    renk: 0x1f8a70, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
-  { id: "misir",   ad: "Mısır",   altbaslik: "Yakında", renk: 0x2f7f9e, durum: "yakinda" },
+  { id: "misir",   ad: "Mısır",   altbaslik: "2026",    renk: 0xc9a227, durum: "acik",    muzik: "assets/japonya/muzik.mp3" },
 ];
 
 // ---------- Tema sistemi ----------
@@ -1178,8 +1178,12 @@ function dekorKur({ W, L, H }) {
   if (d.mesale) {
     const metal = new THREE.MeshStandardMaterial({ color: 0x3b3129, roughness: 0.5, metalness: 0.6 });
     const alev = new THREE.MeshBasicMaterial({ color: 0xffb45c });
+    // Eserler her iki duvarda 3.7 m aralıkla asılı; meşale tam ortalarına,
+    // iki eser ARASINA ve duvarın dibine gelmeli. Eskiden eserin önünde
+    // duruyordu ve tabloyu kapatıyordu.
     let taraf = 1;
-    for (let z = L / 2 - 9; z > -L / 2 + 6; z -= 13) {
+    for (let k = 1.5; k * 3.7 < L - 13; k += 3) {
+      const z = L / 2 - 6 - k * 3.7;
       const g = new THREE.Group();
       const sap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.5, 8), metal);
       sap.position.y = 0.75;
@@ -1187,9 +1191,9 @@ function dekorKur({ W, L, H }) {
       const kase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.1, 0.24, 10), metal);
       kase.position.y = 1.6;
       g.add(kase);
-      const atesTopu = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), alev);
-      atesTopu.scale.y = 1.5;
-      atesTopu.position.y = 1.8;
+      const atesTopu = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), alev);
+      atesTopu.scale.y = 1.6;
+      atesTopu.position.y = 1.76;
       g.add(atesTopu);
       // Gerçek ışık yerine kameraya dönük additive hale: ışık bütçesi
       // dolmasın (bkz. dosya başındaki IŞIK BÜTÇESİ notu).
@@ -1197,10 +1201,10 @@ function dekorKur({ W, L, H }) {
         map: tozDokusu(), color: 0xffa94d, transparent: true,
         opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false,
       }));
-      hale.scale.set(1.8, 1.8, 1);
-      hale.position.y = 1.85;
+      hale.scale.set(1.3, 1.3, 1);
+      hale.position.y = 1.8;
       g.add(hale);
-      g.position.set(taraf * 3.4, 0, z);
+      g.position.set(taraf * (W / 2 - 0.42), 0, z);
       ekle(g);
       taraf *= -1;
     }
@@ -1942,8 +1946,10 @@ function sakuraGuncelle(dt) {
 
     p.y -= p.dusme * dt;
     if (p.y < 0.05) {
-      // yere inen yaprak düştüğü yerde kalır, birikintiye eklenir…
-      yereBirak(p);
+      // Yere inen yaprak düştüğü yerde kalır, birikintiye eklenir. Toz gibi
+      // birikinti katmanı olmayan temalarda böyle bir katman yok: zerre
+      // yalnızca yeniden yukarıdan doğar, havada asılı kalmayı sürdürür.
+      if (sakura.yerde) yereBirak(p);
       // …ve gökyüzünden yepyeni bir yaprak doğar
       p.y = HOL.H - 0.3;
       p.x = (Math.random() - 0.5) * HOL.W * 0.9;

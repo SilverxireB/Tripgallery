@@ -1,103 +1,103 @@
 {
   "baslik": "Bali 2026",
-  "aciklama": "Bali gezimizden kareler.",
+  "aciklama": "Ubud'dan Uluwatu'ya — tapınaklar, şelaleler ve çiçek kokan bir ada.",
   "tema": "bali",
   "fotograflar": [
     {
       "id": "bl001",
       "src": "assets/bali/bl001.jpg",
       "baslik": "Cennetin Kapıları",
-      "not": ""
-    },
-    {
-      "id": "bl002",
-      "src": "assets/bali/bl002.jpg",
-      "baslik": "Bali — 2",
-      "not": ""
+      "not": "Lempuyang'ın ikiye ayrılmış kapısı ve altındaki yansıma. Kollarımızı açtığımız o tek kare için sabahın körüne kalktık."
     },
     {
       "id": "bl003",
       "src": "assets/bali/bl003.jpg",
-      "baslik": "Bali — 3",
-      "not": ""
-    },
-    {
-      "id": "bl004",
-      "src": "assets/bali/bl004.jpg",
-      "baslik": "Bali — 4",
-      "not": ""
-    },
-    {
-      "id": "bl005",
-      "src": "assets/bali/bl005.jpg",
-      "baslik": "Bali — 5",
-      "not": ""
+      "baslik": "Kırmızı Tapınak Kapısı",
+      "not": "Sisin içinde kırmızı tuğla, taş bekçiler ve kapıdan sızan altın bir ışık. Üçümüz basamaklarda."
     },
     {
       "id": "bl006",
       "src": "assets/bali/bl006.jpg",
-      "baslik": "Bali — 6",
-      "not": ""
-    },
-    {
-      "id": "bl007",
-      "src": "assets/bali/bl007.jpg",
-      "baslik": "Bali — 7",
-      "not": ""
-    },
-    {
-      "id": "bl008",
-      "src": "assets/bali/bl008.jpg",
-      "baslik": "Kutsal pınarın koyları",
-      "not": ""
-    },
-    {
-      "id": "bl009",
-      "src": "assets/bali/bl009.jpg",
-      "baslik": "Bali — 9",
-      "not": ""
+      "baslik": "Yağmurdan Sonra Avlu",
+      "not": "Taşlar ıslak, yerde çiçek yaprakları, avlu bomboş. Kapının tam ortasında poz veren biri var."
     },
     {
       "id": "bl010",
       "src": "assets/bali/bl010.jpg",
-      "baslik": "Bali — 10",
-      "not": ""
+      "baslik": "Pura Luhur Uluwatu",
+      "not": "Mor sarongları bağladık, uçurumun üstündeki tapınağa çıktık. Adı taşa altın harflerle yazılı."
     },
     {
-      "id": "bl011",
-      "src": "assets/bali/bl011.jpg",
-      "baslik": "Bali — 11",
-      "not": ""
+      "id": "bl008",
+      "src": "assets/bali/bl008.jpg",
+      "baslik": "Peşimden Gel",
+      "not": "Elimi tuttu, turuncu balıkların yüzdüğü havuzun kenarına götürdü. Tirta Empul'un suyu buz gibiydi."
     },
     {
       "id": "bl012",
       "src": "assets/bali/bl012.jpg",
-      "baslik": "Bali — 12",
-      "not": ""
-    },
-    {
-      "id": "bl013",
-      "src": "assets/bali/bl013.jpg",
-      "baslik": "Şelalede",
-      "not": ""
-    },
-    {
-      "id": "bl014",
-      "src": "assets/bali/bl014.jpg",
-      "baslik": "Bali — 14",
-      "not": ""
+      "baslik": "Tirta Gangga",
+      "not": "Su sarayının ortasında kollarını iki yana açmış. Arkada fıskiyeler, iki yanda taş bekçiler."
     },
     {
       "id": "bl015",
       "src": "assets/bali/bl015.jpg",
-      "baslik": "Bali — 15",
-      "not": ""
+      "baslik": "Şelaleye Bakan Teras",
+      "not": "Bambu korkuluğun ardında Tegenungan. Anne-kız hiç konuşmadan uzun uzun izlediler."
+    },
+    {
+      "id": "bl013",
+      "src": "assets/bali/bl013.jpg",
+      "baslik": "Tegenungan'ın Dibinde",
+      "not": "Suyun içinde, şelalenin tam karşısında. Serpintiden fotoğrafın yarısı buğulu çıktı."
+    },
+    {
+      "id": "bl004",
+      "src": "assets/bali/bl004.jpg",
+      "baslik": "Fille Selam",
+      "not": "Hortum havada, bir el file değmiş, öteki elde zafer işareti. Boy farkı rekorumuz."
+    },
+    {
+      "id": "bl007",
+      "src": "assets/bali/bl007.jpg",
+      "baslik": "Fildişlerinin Önünde",
+      "not": "Kocaman bir dostun gölgesinde ikimiz. O an kimse aceleci değildi."
+    },
+    {
+      "id": "bl011",
+      "src": "assets/bali/bl011.jpg",
+      "baslik": "Çiçek Banyosu",
+      "not": "Küvet dolusu pembe ve kırmızı yaprak. Bali'nin en güzel âdeti bu olsa gerek."
+    },
+    {
+      "id": "bl005",
+      "src": "assets/bali/bl005.jpg",
+      "baslik": "Köpük Fırtınası",
+      "not": "Havuz başı köpük partisi. Kafamızda köpükten şapkalarla çıktık sudan."
     },
     {
       "id": "bl016",
       "src": "assets/bali/bl016.jpg",
-      "baslik": "Bali — 16",
-      "not": ""
+      "baslik": "Havuz Başı İkramı",
+      "not": "Bir karpuz suyu, bir buzlu kahve ve turkuaz bir havuz. Günün en sakin saati."
+    },
+    {
+      "id": "bl014",
+      "src": "assets/bali/bl014.jpg",
+      "baslik": "Havuzdan Aile Selfie'si",
+      "not": "Arkada palmiyeler ve okyanus, göğüste bir jepun çiçeği. Islak saçlarla üçümüz."
+    },
+    {
+      "id": "bl002",
+      "src": "assets/bali/bl002.jpg",
+      "baslik": "Kayanın Dibinde Kum",
+      "not": "Uçurumun gölgesinde küçücük bir koy. Sadece dalga sesi ve iki kişi."
+    },
+    {
+      "id": "bl009",
+      "src": "assets/bali/bl009.jpg",
+      "baslik": "Günün Sonu",
+      "not": "Deniz aynaya dönmüş, kumda ayak izleri, uzakta suya oturmuş biri. Bali'ye böyle veda ettik."
     }
   ]
 }

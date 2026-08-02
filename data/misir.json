@@ -1,0 +1,103 @@
+{
+  "baslik": "Mısır 2026",
+  "aciklama": "Kahire, Giza ve Nil — çölün kenarında bir aile seyahati.",
+  "tema": "misir",
+  "fotograflar": [
+    {
+      "id": "ms004",
+      "src": "assets/misir/ms004.jpg",
+      "baslik": "Balkondan Giza",
+      "not": "Perdeyi aralayınca çölün ucunda iki üçgen duruyordu. İlk sabah, daha kahvaltıya inmeden."
+    },
+    {
+      "id": "ms007",
+      "src": "assets/misir/ms007.jpg",
+      "baslik": "Piramit Manzaralı Kahvaltı",
+      "not": "Portakal suyu, peynir tabağı ve arkada dört bin beş yüz yıl. Hayatın en tuhaf kahvaltı manzarası."
+    },
+    {
+      "id": "ms003",
+      "src": "assets/misir/ms003.jpg",
+      "baslik": "Şuraya Bak",
+      "not": "Parmağıyla gösterdiği şey, hayatında gördüğü ilk piramit. Rüzgâr saçını almış, sesi hâlâ kulağımda."
+    },
+    {
+      "id": "ms014",
+      "src": "assets/misir/ms014.jpg",
+      "baslik": "Keops'un Önünde Havada",
+      "not": "Zıpla dedik, zıpladı. Arkadaki taş yığını dört bin yıldır kıpırdamadı; o iki saniye havada kaldı."
+    },
+    {
+      "id": "ms012",
+      "src": "assets/misir/ms012.jpg",
+      "baslik": "Plato",
+      "not": "Giza platosu bomboş, taşlar dağınık, ortada minicik bir siluet. Ölçek ancak böyle anlaşılıyor."
+    },
+    {
+      "id": "ms013",
+      "src": "assets/misir/ms013.jpg",
+      "baslik": "Kefren'in Gölgesinde",
+      "not": "Bir taşın üstüne oturup arkanı dönüyorsun. Kadraja giren asıl şey piramit değil, o günün keyfi."
+    },
+    {
+      "id": "ms016",
+      "src": "assets/misir/ms016.jpg",
+      "baslik": "Sfenks ile Aile Portresi",
+      "not": "Üçümüz, bir de dört bin yıldır aynı yöne bakan o. Kol kısa geldi ama hepimiz sığdık."
+    },
+    {
+      "id": "ms002",
+      "src": "assets/misir/ms002.jpg",
+      "baslik": "Havuz Molası",
+      "not": "Çölün ortasındaki günün tam ortası. Suyun kenarı, pembe gözlük ve hiçbir yere yetişme telaşı yok."
+    },
+    {
+      "id": "ms005",
+      "src": "assets/misir/ms005.jpg",
+      "baslik": "Büyük Mısır Müzesi'ne Doğru",
+      "not": "El ele, upuzun taş meydanı geçiyoruz. Kapı kocaman bir üçgen; içeride koca bir ülke var."
+    },
+    {
+      "id": "ms010",
+      "src": "assets/misir/ms010.jpg",
+      "baslik": "II. Ramses",
+      "not": "On bir metrelik granit firavunun ayağının dibinde iki kişi. Boy ölçüsü burada alınıyor."
+    },
+    {
+      "id": "ms006",
+      "src": "assets/misir/ms006.jpg",
+      "baslik": "Merdivendeki Krallar",
+      "not": "Basamak basamak dizilmiş kralların önünde bir sarılma. Taş sert, kucak sıcak."
+    },
+    {
+      "id": "ms009",
+      "src": "assets/misir/ms009.jpg",
+      "baslik": "Vitrinlerin Arasında",
+      "not": "Sağında Mentuhotep, solunda Sobekhotep, ortada Stitch tişörtü. Salonun en neşeli ziyaretçisi."
+    },
+    {
+      "id": "ms015",
+      "src": "assets/misir/ms015.jpg",
+      "baslik": "Nil'de Tekne",
+      "not": "Beyaz güverte, boyalı Arapça bir yazı ve akan su. Kahire'yi asıl nehirden anlıyorsun."
+    },
+    {
+      "id": "ms008",
+      "src": "assets/misir/ms008.jpg",
+      "baslik": "Nil'den Selam",
+      "not": "Arkada Kahire Kulesi, önde iki gülümseme. Rüzgâr karenin yarısını almış."
+    },
+    {
+      "id": "ms011",
+      "src": "assets/misir/ms011.jpg",
+      "baslik": "Nil'de Gün Batımı",
+      "not": "Güneş palmiyelerin arkasına iniyor, su turuncuya kesiyor. O an kimse konuşmadı."
+    },
+    {
+      "id": "ms001",
+      "src": "assets/misir/ms001.jpg",
+      "baslik": "Kahire'de Doğum Günü",
+      "not": "Tek mum, iki kişi ve bütün seyahatin en tatlı akşamı. Dilek tutuldu, kimseye söylenmedi."
+    }
+  ]
+}

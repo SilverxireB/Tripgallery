@@ -1,103 +1,103 @@
 {
   "baslik": "Tayland 2026",
-  "aciklama": "Tayland gezimizden kareler.",
+  "aciklama": "Phuket, Krabi ve Phang Nga — deniz, orman ve hayvanlarla geçen günler.",
   "tema": "tayland",
   "fotograflar": [
     {
-      "id": "ty001",
-      "src": "assets/tayland/ty001.jpg",
-      "baslik": "Aslan yavrusuyla",
-      "not": ""
-    },
-    {
       "id": "ty002",
       "src": "assets/tayland/ty002.jpg",
-      "baslik": "Tayland — 2",
-      "not": ""
-    },
-    {
-      "id": "ty003",
-      "src": "assets/tayland/ty003.jpg",
-      "baslik": "Tayland — 3",
-      "not": ""
-    },
-    {
-      "id": "ty004",
-      "src": "assets/tayland/ty004.jpg",
-      "baslik": "Sahildeki hindistancevizi tezgâhı",
-      "not": ""
-    },
-    {
-      "id": "ty005",
-      "src": "assets/tayland/ty005.jpg",
-      "baslik": "Tayland — 5",
-      "not": ""
-    },
-    {
-      "id": "ty006",
-      "src": "assets/tayland/ty006.jpg",
-      "baslik": "Tayland — 6",
-      "not": ""
-    },
-    {
-      "id": "ty007",
-      "src": "assets/tayland/ty007.jpg",
-      "baslik": "Tayland — 7",
-      "not": ""
-    },
-    {
-      "id": "ty008",
-      "src": "assets/tayland/ty008.jpg",
-      "baslik": "Bambu ormanında",
-      "not": ""
-    },
-    {
-      "id": "ty009",
-      "src": "assets/tayland/ty009.jpg",
-      "baslik": "Tayland — 9",
-      "not": ""
-    },
-    {
-      "id": "ty010",
-      "src": "assets/tayland/ty010.jpg",
-      "baslik": "Tayland — 10",
-      "not": ""
+      "baslik": "Palmiyenin Altında",
+      "not": "Adaya ilk iniş. Palmiye eğilmiş, kum sıcak, üçümüz daha valizi açmadan sahildeyiz."
     },
     {
       "id": "ty011",
       "src": "assets/tayland/ty011.jpg",
-      "baslik": "Palmiyenin altında",
-      "not": ""
+      "baslik": "Şemsiyeler Denizi",
+      "not": "Rengârenk şemsiyeler ufka kadar diziliyor. Anne-kız o kalabalığın önünde kendi köşelerini bulmuş."
     },
     {
-      "id": "ty012",
-      "src": "assets/tayland/ty012.jpg",
-      "baslik": "Tayland — 12",
-      "not": ""
+      "id": "ty004",
+      "src": "assets/tayland/ty004.jpg",
+      "baslik": "Kumdaki Tezgâh",
+      "not": "Hasır çatılı küçük bir büfe: hindistancevizi, cips ve tebeşirle yazılmış fiyatlar. Sahilin en tatlı durağı."
     },
     {
-      "id": "ty013",
-      "src": "assets/tayland/ty013.jpg",
-      "baslik": "Tayland — 13",
-      "not": ""
-    },
-    {
-      "id": "ty014",
-      "src": "assets/tayland/ty014.jpg",
-      "baslik": "Tayland — 14",
-      "not": ""
+      "id": "ty006",
+      "src": "assets/tayland/ty006.jpg",
+      "baslik": "Kayanın Dibinde Yüzmek",
+      "not": "Suyun rengi yeşile çalıyor, arkada dev bir kalker kaya. Gözlükler takılı, dünya sessiz."
     },
     {
       "id": "ty015",
       "src": "assets/tayland/ty015.jpg",
-      "baslik": "Tayland — 15",
-      "not": ""
+      "baslik": "James Bond Adası",
+      "not": "Phang Nga Körfezi'nin o meşhur iğnesi tam arkasında. Parmağını kaldırıp 'işte bu' dedi."
     },
     {
       "id": "ty016",
       "src": "assets/tayland/ty016.jpg",
-      "baslik": "Tayland — 16",
-      "not": ""
+      "baslik": "Mangrovların İçinden",
+      "not": "Sarı kanoyla köklerin arasından süzülüyoruz. Can yeleği pembe, keyif tam."
+    },
+    {
+      "id": "ty007",
+      "src": "assets/tayland/ty007.jpg",
+      "baslik": "Ormanda Tahta Köprü",
+      "not": "Palmiyelerin altında dar bir yol; önde baba, arkada kollarını açmış bir kâşif."
+    },
+    {
+      "id": "ty008",
+      "src": "assets/tayland/ty008.jpg",
+      "baslik": "Dev Bambuların Önünde",
+      "not": "Arkasındaki bambular ev boyunda. Elinde bir bardak, yüzünde 'e ne var bunda' ifadesi."
+    },
+    {
+      "id": "ty005",
+      "src": "assets/tayland/ty005.jpg",
+      "baslik": "Fille Aile Portresi",
+      "not": "Üçümüz ve kocaman bir dost. Hortumuna dokunduğunda elinin ne kadar küçük kaldığını fark ettik."
+    },
+    {
+      "id": "ty009",
+      "src": "assets/tayland/ty009.jpg",
+      "baslik": "Nehirde Fil Banyosu",
+      "not": "Çamurlu suda, hortum havada. Bu geziden aklında en çok bu an kaldı."
+    },
+    {
+      "id": "ty001",
+      "src": "assets/tayland/ty001.jpg",
+      "baslik": "Biberonla Aslan Yavrusu",
+      "not": "Kucağımda bir aslan yavrusu, elimde biberon. Kimin daha çok heyecanlandığı tartışılır."
+    },
+    {
+      "id": "ty013",
+      "src": "assets/tayland/ty013.jpg",
+      "baslik": "Aslanla Uyku Arkadaşı",
+      "not": "Yavru aslan oyuncak ayıya sarılmış, o da aslana. Üç arkadaş, tek kare."
+    },
+    {
+      "id": "ty003",
+      "src": "assets/tayland/ty003.jpg",
+      "baslik": "Tavşanları Beslerken",
+      "not": "Ahşap sıranın üstünde bir sürü tavşan. Elini uzattığı an hepsi ona döndü."
+    },
+    {
+      "id": "ty010",
+      "src": "assets/tayland/ty010.jpg",
+      "baslik": "Timsaha Dokunmak",
+      "not": "Camın öteki tarafında bir timsah, beri tarafta uzanmış küçük bir el. Kimse nefes almadı."
+    },
+    {
+      "id": "ty012",
+      "src": "assets/tayland/ty012.jpg",
+      "baslik": "Fenerde Bir Mum",
+      "not": "Tapınağın avlusundaki gümüş fenere birlikte bir mum yaktık. Dilek sessizce kalsın."
+    },
+    {
+      "id": "ty014",
+      "src": "assets/tayland/ty014.jpg",
+      "baslik": "Tukan Bardaki Dost",
+      "not": "Tezgâhın üstünde bir tukan, kucakta bir kız, arkada bütün bir tatilin neşesi."
     }
   ]
 }
