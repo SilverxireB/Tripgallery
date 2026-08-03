@@ -1982,6 +1982,18 @@ addEventListener("keydown", (e) => {
   else muzik.pause();
 });
 
+// Bilgisayarda O ile otomatik tur. Fare kilitliyken imleç yok, düğmeye
+// tıklanamıyordu; turun klavyeden de açılabilmesi şart.
+addEventListener("keydown", (e) => {
+  if (e.code !== "KeyO" || !gezintiAktif) return;
+  if (lightboxAcik) return;
+  if (turModu) { turuDurdur(); return; }
+  // Tur yalnızca bir serginin içinde anlamlı (hub'da düğme de gizli)
+  if (TEK_BINA && bolge !== "salon") return;
+  turuBaslat();
+  turDugmesiTazele();
+});
+
 function gurultuTamponu(sure) {
   const sr = sesCtx.sampleRate;
   const buf = sesCtx.createBuffer(1, Math.max(1, Math.floor(sr * sure)), sr);
@@ -3439,6 +3451,8 @@ async function hubBaslat() {
     aciklamaEl.textContent = "Bir sergi kapısına doğru yürüyün — kapı açılır, müziği başlar ve içeri girersiniz.";
     btnGir.disabled = false;
     btnGir.textContent = "Salona Gir";
+    // Bina hazır: perde artık saydamlaşabilir, arkada eksik bir şey yok
+    giris.classList.remove("hazirlaniyor");
   });
 }
 
@@ -3503,6 +3517,7 @@ async function baslat() {
 
   btnGir.disabled = false;
   btnGir.textContent = "Salona Gir";
+  giris.classList.remove("hazirlaniyor"); // salon hazır, perde saydamlaşabilir
 
   // Hub kapısından yürüyerek gelindi: karşılama ekranı yok, doğrudan sergide
   if (AKIS) akisBaslat();

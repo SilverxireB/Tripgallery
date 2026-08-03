@@ -117,6 +117,17 @@ body {
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* Sergiler kurulurken perde TAMAMEN kapalı olmalı: yarı saydam ekranın
+   ardında duvarların, kapıların tek tek belirmesi hata gibi görünüyordu.
+   Bina hazır olunca sınıf kalkar, perde her zamanki yarı saydam menüye
+   döner (Esc ile açılınca galeriyi arkada görmek hoş). */
+.overlay.hazirlaniyor {
+  background: #0a0806;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 0.8s ease;
+}
+
 .giris-kart {
   text-align: center;
   max-width: 560px;
